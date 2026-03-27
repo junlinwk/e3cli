@@ -1,4 +1,4 @@
-"""e3cli schedule — 管理定時同步排程。"""
+"""e3cli schedule"""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import typer
 from rich.console import Console
 
 from e3cli.config import load_config
+from e3cli.i18n import t
 from e3cli.scheduler import cron
 
 console = Console()
@@ -14,28 +15,28 @@ app = typer.Typer()
 
 @app.command()
 def enable(
-    interval: int = typer.Option(None, "--interval", "-i", help="同步間隔 (分鐘)"),
+    interval: int = typer.Option(None, "--interval", "-i", help=t("sched.opt_interval")),
 ):
-    """啟用定時同步 (安裝 cron job)。"""
+    """Enable automatic sync (install cron job)."""
     cfg = load_config()
     minutes = interval or cfg.schedule.interval_minutes
     cron.install(minutes)
-    console.print(f"[green]✓ 已啟用定時同步，每 {minutes} 分鐘執行一次。[/green]")
+    console.print(f"[green]{t('sched.enabled', m=minutes)}[/green]")
 
 
 @app.command()
 def disable():
-    """停用定時同步 (移除 cron job)。"""
+    """Disable automatic sync (remove cron job)."""
     cron.uninstall()
-    console.print("[green]✓ 已停用定時同步。[/green]")
+    console.print(f"[green]{t('sched.disabled')}[/green]")
 
 
 @app.command()
 def status():
-    """顯示目前排程狀態。"""
+    """Show current schedule status."""
     if cron.is_installed():
         line = cron.get_schedule_line()
-        console.print("[green]✓ 排程已啟用[/green]")
+        console.print(f"[green]{t('sched.status_on')}[/green]")
         console.print(f"  [dim]{line}[/dim]")
     else:
-        console.print("[yellow]排程未啟用。使用 e3cli schedule enable 來啟用。[/yellow]")
+        console.print(f"[yellow]{t('sched.status_off')}[/yellow]")

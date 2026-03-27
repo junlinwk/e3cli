@@ -1,4 +1,4 @@
-"""e3cli logout — 清除所有認證資料。"""
+"""e3cli logout"""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import typer
 from rich.console import Console
 
 from e3cli.credential import clear_credentials
+from e3cli.i18n import t
 
 console = Console()
 app = typer.Typer()
@@ -13,6 +14,6 @@ app = typer.Typer()
 
 @app.callback(invoke_without_command=True)
 def logout():
-    """清除已儲存的 token 與帳密。"""
+    """Clear all stored credentials and tokens."""
     clear_credentials()
-    console.print("[green]✓ 所有認證資料已安全清除。[/green]")
+    console.print(f"[green]{t('logout.done')}[/green]")

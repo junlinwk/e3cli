@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import sys
+
 import typer
 
 from e3cli import __version__
@@ -11,26 +13,49 @@ from e3cli.commands.download import app as download_app
 from e3cli.commands.login import app as login_app
 from e3cli.commands.logout import app as logout_app
 from e3cli.commands.schedule import app as schedule_app
+from e3cli.commands.setup import app as setup_app
+from e3cli.commands.setup import is_first_run, run_setup_wizard
 from e3cli.commands.submit import app as submit_app
 from e3cli.commands.sync import app as sync_app
+from e3cli.i18n import t
 
 app = typer.Typer(
     name="e3cli",
-    help="NYCU E3 Moodle Automation CLI",
+    help=t("cli.help"),
     no_args_is_help=True,
 )
 
-app.add_typer(login_app, name="login", help="登入取得 token")
-app.add_typer(logout_app, name="logout", help="清除認證資料")
-app.add_typer(courses_app, name="courses", help="列出修課清單")
-app.add_typer(assignments_app, name="assignments", help="列出作業與截止日期")
-app.add_typer(download_app, name="download", help="下載課程教材")
-app.add_typer(submit_app, name="submit", help="提交作業")
-app.add_typer(sync_app, name="sync", help="全量同步")
-app.add_typer(schedule_app, name="schedule", help="管理定時同步排程")
+app.add_typer(login_app, name="login", help=t("cli.login"))
+app.add_typer(logout_app, name="logout", help=t("cli.logout"))
+app.add_typer(courses_app, name="courses", help=t("cli.courses"))
+app.add_typer(assignments_app, name="assignments", help=t("cli.assignments"))
+app.add_typer(download_app, name="download", help=t("cli.download"))
+app.add_typer(submit_app, name="submit", help=t("cli.submit"))
+app.add_typer(sync_app, name="sync", help=t("cli.sync"))
+app.add_typer(schedule_app, name="schedule", help=t("cli.schedule"))
+app.add_typer(setup_app, name="setup", help=t("cli.setup"))
 
 
 @app.command()
 def version():
-    """顯示版本"""
+    """Show version."""
     typer.echo(f"e3cli {__version__}")
+
+
+_original_app_call = app.__call__
+
+
+def _app_with_first_run(*args, **kwargs):
+    skip_keywords = {"--help", "-h", "version", "setup", "--show-completion", "--install-completion"}
+    if (
+        is_first_run()
+        and sys.stdin.isatty()
+        and not any(arg in skip_keywords for arg in sys.argv[1:])
+    ):
+        run_setup_wizard()
+        if len(sys.argv) <= 1:
+            return
+    return _original_app_call(*args, **kwargs)
+
+
+app.__call__ = _app_with_first_run

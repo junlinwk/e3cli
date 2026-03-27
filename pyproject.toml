@@ -27,7 +27,6 @@ dependencies = [
     "typer>=0.9",
     "requests>=2.31",
     "rich>=13.0",
-    "cryptography>=42.0",
 ]
 
 [project.optional-dependencies]

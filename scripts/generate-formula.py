@@ -49,7 +49,7 @@ def main():
     tarball_url = f"https://github.com/{GITHUB_REPO}/archive/refs/tags/{tag}.tar.gz"
 
     # Core dependencies (from pyproject.toml)
-    deps = ["typer", "requests", "rich", "cryptography"]
+    deps = ["typer", "requests", "rich"]
 
     print(f'class E3cli < Formula')
     print(f'  include Language::Python::Virtualenv')

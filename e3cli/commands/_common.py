@@ -7,6 +7,7 @@ from rich.console import Console
 
 from e3cli.api.client import MoodleClient
 from e3cli.config import load_config, load_token
+from e3cli.i18n import t
 from e3cli.storage.db import Database
 
 console = Console()
@@ -17,7 +18,7 @@ def get_client() -> MoodleClient:
     cfg = load_config()
     token = load_token()
     if not token:
-        console.print("[red]尚未登入，請先執行 e3cli login[/red]")
+        console.print(f"[red]{t('common.not_logged_in')}[/red]")
         raise typer.Exit(1)
     return MoodleClient(cfg.moodle.url, token)
 

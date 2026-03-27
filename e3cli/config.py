@@ -33,10 +33,16 @@ class ScheduleConfig:
 
 
 @dataclass
+class GeneralConfig:
+    lang: str = ""  # "" = auto-detect, "zh", "en"
+
+
+@dataclass
 class Config:
     moodle: MoodleConfig = field(default_factory=MoodleConfig)
     storage: StorageConfig = field(default_factory=StorageConfig)
     schedule: ScheduleConfig = field(default_factory=ScheduleConfig)
+    general: GeneralConfig = field(default_factory=GeneralConfig)
 
 
 def ensure_dirs() -> None:
@@ -70,6 +76,10 @@ def load_config() -> Config:
             sc = data["schedule"]
             cfg.schedule.interval_minutes = sc.get("interval_minutes", cfg.schedule.interval_minutes)
             cfg.schedule.notify = sc.get("notify", cfg.schedule.notify)
+
+        if "general" in data:
+            g = data["general"]
+            cfg.general.lang = g.get("lang", cfg.general.lang)
 
     return cfg
 

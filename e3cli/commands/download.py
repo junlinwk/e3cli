@@ -1,4 +1,4 @@
-"""e3cli download — 下載課程教材。"""
+"""e3cli download"""
 
 from __future__ import annotations
 
@@ -14,24 +14,24 @@ from e3cli.api.files import download_file
 from e3cli.api.site import get_site_info
 from e3cli.commands._common import get_client, get_db
 from e3cli.config import load_config
+from e3cli.i18n import t
 
 console = Console()
 app = typer.Typer()
 
 
 def _sanitize(name: str) -> str:
-    """將名稱轉為安全的檔案系統路徑。"""
     return re.sub(r'[<>:"/\\|?*]', "_", name).strip().rstrip(".")
 
 
 @app.callback(invoke_without_command=True)
 def download(
-    course: str = typer.Option(None, "--course", "-c", help="只下載特定課程 (課程代碼或名稱的子字串)"),
-    all_courses: bool = typer.Option(False, "--all", "-a", help="下載所有課程的教材"),
+    course: str = typer.Option(None, "--course", "-c", help=t("dl.opt_course")),
+    all_courses: bool = typer.Option(False, "--all", "-a", help=t("dl.opt_all")),
 ):
-    """下載課程教材到本地。"""
+    """Download course materials."""
     if not course and not all_courses:
-        console.print("[yellow]請指定 --course 或 --all[/yellow]")
+        console.print(f"[yellow]{t('dl.need_flag')}[/yellow]")
         raise typer.Exit(1)
 
     client = get_client()
@@ -42,7 +42,6 @@ def download(
     info = get_site_info(client)
     course_list = get_enrolled_courses(client, info["userid"])
 
-    # 過濾課程
     if course:
         course_lower = course.lower()
         course_list = [
@@ -51,7 +50,7 @@ def download(
             or course_lower in c.get("fullname", "").lower()
         ]
         if not course_list:
-            console.print(f"[red]找不到符合 '{course}' 的課程[/red]")
+            console.print(f"[red]{t('dl.no_match', q=course)}[/red]")
             raise typer.Exit(1)
 
     total_new = 0
@@ -62,13 +61,13 @@ def download(
         cname = _sanitize(c.get("shortname", str(cid)))
         db.upsert_course(cid, c.get("shortname", ""), c.get("fullname", ""))
 
-        console.print(f"\n[bold cyan]📚 {c.get('fullname', cname)}[/bold cyan]")
+        console.print(f"\n[bold cyan]{c.get('fullname', cname)}[/bold cyan]")
 
         contents = get_course_contents(client, cid)
         files_to_download = []
 
         for section in contents:
-            section_name = _sanitize(section.get("name", "未命名"))
+            section_name = _sanitize(section.get("name", "unnamed"))
             for module in section.get("modules", []):
                 mid = module.get("id", 0)
                 for file_info in module.get("contents", []):
@@ -88,11 +87,11 @@ def download(
                     files_to_download.append((cid, mid, fname, furl, fsize, ftime, dest))
 
         if not files_to_download:
-            console.print("  [dim]沒有新檔案[/dim]")
+            console.print(f"  [dim]{t('dl.no_new')}[/dim]")
             continue
 
         with Progress(console=console) as progress:
-            task = progress.add_task("  下載中...", total=len(files_to_download))
+            task = progress.add_task(f"  {t('dl.progress')}", total=len(files_to_download))
             for cid, mid, fname, furl, fsize, ftime, dest in files_to_download:
                 download_file(client, furl, dest)
                 db.record_download(
@@ -102,5 +101,5 @@ def download(
                 total_new += 1
                 progress.advance(task)
 
-    console.print(f"\n[green]✓ 完成！下載 {total_new} 個新檔案，略過 {total_skipped} 個已存在的檔案。[/green]")
+    console.print(f"\n[green]{t('dl.done', new=total_new, skip=total_skipped)}[/green]")
     db.close()

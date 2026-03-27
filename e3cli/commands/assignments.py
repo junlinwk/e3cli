@@ -1,4 +1,4 @@
-"""e3cli assignments — 列出作業與截止日期。"""
+"""e3cli assignments"""
 
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ from e3cli.api.assignments import get_assignments
 from e3cli.api.courses import get_enrolled_courses
 from e3cli.api.site import get_site_info
 from e3cli.commands._common import get_client, get_db
+from e3cli.i18n import t
 
 console = Console()
 app = typer.Typer()
@@ -20,24 +21,24 @@ app = typer.Typer()
 
 def _format_duedate(ts: int) -> str:
     if ts == 0:
-        return "無截止日"
+        return t("assign.no_deadline")
     dt = datetime.fromtimestamp(ts)
     remaining = ts - int(time.time())
-    if remaining < 0:
-        return f"[red]{dt:%Y-%m-%d %H:%M} (已過期)[/red]"
     days = remaining // 86400
+    if remaining < 0:
+        return f"[red]{dt:%Y-%m-%d %H:%M} ({t('assign.expired')})[/red]"
     if days <= 3:
-        return f"[red]{dt:%Y-%m-%d %H:%M} ({days}天後)[/red]"
+        return f"[red]{dt:%Y-%m-%d %H:%M} ({t('assign.days_left', n=days)})[/red]"
     if days <= 7:
-        return f"[yellow]{dt:%Y-%m-%d %H:%M} ({days}天後)[/yellow]"
-    return f"{dt:%Y-%m-%d %H:%M} ({days}天後)"
+        return f"[yellow]{dt:%Y-%m-%d %H:%M} ({t('assign.days_left', n=days)})[/yellow]"
+    return f"{dt:%Y-%m-%d %H:%M} ({t('assign.days_left', n=days)})"
 
 
 @app.callback(invoke_without_command=True)
 def assignments(
-    due_soon: int = typer.Option(None, "--due-soon", help="只顯示 N 天內到期的作業"),
+    due_soon: int = typer.Option(None, "--due-soon", help=t("assign.opt_due_soon")),
 ):
-    """列出所有作業與截止日期。"""
+    """List assignments and deadlines."""
     client = get_client()
     db = get_db()
 
@@ -47,18 +48,18 @@ def assignments(
     course_names = {c["id"]: c.get("shortname", "") for c in course_list}
 
     if not courseids:
-        console.print("[yellow]沒有課程。[/yellow]")
+        console.print(f"[yellow]{t('common.no_courses')}[/yellow]")
         raise typer.Exit()
 
     data = get_assignments(client, courseids)
     now = int(time.time())
 
-    table = Table(title="作業列表")
-    table.add_column("ID", style="dim")
-    table.add_column("課程", style="cyan")
-    table.add_column("作業名稱", style="bold")
-    table.add_column("截止日期")
-    table.add_column("狀態")
+    table = Table(title=t("assign.title"))
+    table.add_column(t("courses.col_id"), style="dim")
+    table.add_column(t("assign.col_course"), style="cyan")
+    table.add_column(t("assign.col_name"), style="bold")
+    table.add_column(t("assign.col_due"))
+    table.add_column(t("assign.col_status"))
 
     count = 0
     for course in data.get("courses", []):
@@ -67,12 +68,10 @@ def assignments(
         for a in course.get("assignments", []):
             duedate = a.get("duedate", 0)
 
-            # 過濾 due_soon
             if due_soon is not None:
                 if duedate == 0 or duedate - now > due_soon * 86400 or duedate < now:
                     continue
 
-            # 更新資料庫
             db.upsert_assignment(a["id"], cid, cname, a["name"], duedate, now)
 
             table.add_row(
@@ -85,7 +84,7 @@ def assignments(
             count += 1
 
     if count == 0:
-        console.print("[green]沒有符合條件的作業。[/green]")
+        console.print(f"[green]{t('assign.empty')}[/green]")
     else:
         console.print(table)
 
