@@ -18,7 +18,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install build tools
-        run: pip install build twine
+        run: pip install build
 
       - name: Build package
         run: python -m build
@@ -34,7 +34,7 @@ jobs:
       #   env:
       #     TWINE_USERNAME: __token__
       #     TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-      #   run: twine upload dist/*
+      #   run: pip install twine && twine upload dist/*
 
   update-homebrew:
     needs: release
@@ -42,23 +42,77 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Generate formula
+      - name: Calculate tarball sha256
+        id: sha
         run: |
-          python scripts/generate-formula.py ${{ github.ref_name }} > /tmp/e3cli.rb
-          echo "Generated formula:"
-          cat /tmp/e3cli.rb
+          TARBALL_URL="https://github.com/${{ github.repository }}/archive/refs/tags/${{ github.ref_name }}.tar.gz"
+          echo "url=${TARBALL_URL}" >> "$GITHUB_OUTPUT"
+          SHA=$(curl -sL "${TARBALL_URL}" | sha256sum | cut -d' ' -f1)
+          echo "sha256=${SHA}" >> "$GITHUB_OUTPUT"
+          echo "Tarball: ${TARBALL_URL}"
+          echo "SHA256:  ${SHA}"
 
-      # 如果使用獨立的 homebrew-e3cli tap repo，取消下面的註解
-      # - name: Update Homebrew tap
-      #   uses: peter-evans/create-pull-request@v6
-      #   with:
-      #     token: ${{ secrets.TAP_GITHUB_TOKEN }}
-      #     repository: user/homebrew-e3cli
-      #     branch: update-${{ github.ref_name }}
-      #     title: "Update e3cli to ${{ github.ref_name }}"
-      #     body: "Automated formula update"
-      #     commit-message: "e3cli ${{ github.ref_name }}"
+      - name: Clone homebrew tap
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/homebrew-e3cli
+          token: ${{ secrets.TAP_GITHUB_TOKEN }}
+          path: homebrew-tap
+
+      - name: Update formula
+        run: |
+          cat > homebrew-tap/Formula/e3cli.rb << 'FORMULA_EOF'
+          class E3cli < Formula
+            include Language::Python::Virtualenv
+
+            desc "NYCU E3 Moodle automation CLI — sync courses, download materials, submit assignments"
+            homepage "https://github.com/${{ github.repository }}"
+            url "${{ steps.sha.outputs.url }}"
+            sha256 "${{ steps.sha.outputs.sha256 }}"
+            license "MIT"
+
+            depends_on "python@3.12"
+          FORMULA_EOF
+
+          # Append dependency resources from PyPI
+          python3 -c "
+          import json, urllib.request
+          deps = ['typer', 'requests', 'rich']
+          for pkg in deps:
+              info = json.loads(urllib.request.urlopen(f'https://pypi.org/pypi/{pkg}/json').read())
+              ver = info['info']['version']
+              for f in info['releases'][ver]:
+                  if f['packagetype'] == 'sdist':
+                      print(f'')
+                      print(f'  resource \"{pkg}\" do')
+                      print(f'    url \"{f[\"url\"]}\"')
+                      print(f'    sha256 \"{f[\"digests\"][\"sha256\"]}\"')
+                      print(f'  end')
+                      break
+          " >> homebrew-tap/Formula/e3cli.rb
+
+          # Append install and test blocks
+          cat >> homebrew-tap/Formula/e3cli.rb << 'TAIL_EOF'
+
+            def install
+              virtualenv_install_with_resources
+            end
+
+            test do
+              assert_match "e3cli", shell_output("#{bin}/e3cli version")
+            end
+          end
+          TAIL_EOF
+
+          echo "=== Generated formula ==="
+          cat homebrew-tap/Formula/e3cli.rb
+
+      - name: Push updated formula
+        run: |
+          cd homebrew-tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/e3cli.rb
+          git diff --cached --quiet && echo "No changes" && exit 0
+          git commit -m "Update e3cli to ${{ github.ref_name }}"
+          git push

@@ -6,6 +6,7 @@ build/
 .venv/
 *.db
 .claude/
+.DS_Store
 
 # Credentials — never commit
 .e3cli/
