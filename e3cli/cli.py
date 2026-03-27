@@ -16,7 +16,7 @@ from e3cli.commands.sync import app as sync_app
 
 app = typer.Typer(
     name="e3cli",
-    help="NYCU E3 Moodle 自動化工具",
+    help="NYCU E3 Moodle Automation CLI",
     no_args_is_help=True,
 )
 
@@ -32,5 +32,5 @@ app.add_typer(schedule_app, name="schedule", help="管理定時同步排程")
 
 @app.command()
 def version():
-    """顯示版本。"""
+    """顯示版本"""
     typer.echo(f"e3cli {__version__}")

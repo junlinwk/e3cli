@@ -13,4 +13,5 @@ token
 *.enc
 key
 credentials.enc
+homebrew-e3cli/
 
