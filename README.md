@@ -68,7 +68,17 @@ cd e3cli
 pip install -e ".[dev]"
 ```
 
-## Update
+> After any installation method, `e3cli` will be available as a system-wide command.
+
+### Upgrade
+
+| Install method | Upgrade command |
+|---|---|
+| Homebrew | `brew update && brew upgrade e3cli` |
+| pipx (PyPI) | `pipx upgrade e3cli` |
+| pipx (GitHub) | `pipx install git+https://github.com/junlinwk/e3cli.git --force` |
+| pip (PyPI) | `pip install e3cli --upgrade` |
+
 ---
 
 ## Quick Start
@@ -247,7 +257,6 @@ e3cli uses **Fernet symmetric encryption** (from the `cryptography` library) to 
 | `~/.e3cli/data/e3cli.db` | SQLite tracking DB (downloaded files, assignment status) |
 | `~/e3-downloads/` | Downloaded course materials |
 
-
 ---
 
 ## Project Structure
@@ -304,7 +313,7 @@ e3cli/
 
 ```bash
 # Clone and install in dev mode
-git clone https://github.com/<your-user>/e3cli.git
+git clone https://github.com/junlinwk/e3cli.git
 cd e3cli
 make dev                    # pip install -e ".[dev]"
 
@@ -318,16 +327,6 @@ make test
 make build
 ```
 
----
-
-## Roadmap
-
-- [ ] AI-powered material summarization (`e3cli ai summarize`)
-- [ ] AI-assisted assignment drafting (`e3cli ai draft`)
-- [ ] Smart deadline notifications with priority scoring
-- [ ] Desktop notification integration (Linux `notify-send`, macOS `osascript`)
-- [ ] Course filtering by semester
-- [ ] Parallel downloads for faster sync
 
 ---
 
