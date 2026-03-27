@@ -29,12 +29,11 @@ jobs:
           files: dist/*
           generate_release_notes: true
 
-      # 如果要發佈到 PyPI，取消下面的註解並設定 PYPI_API_TOKEN secret
-      # - name: Publish to PyPI
-      #   env:
-      #     TWINE_USERNAME: __token__
-      #     TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-      #   run: pip install twine && twine upload dist/*
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: pip install twine && twine upload dist/*
 
   update-homebrew:
     needs: release

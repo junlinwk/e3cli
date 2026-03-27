@@ -31,7 +31,7 @@ Requires **Python 3.11+**.
 
 ```bash
 # Add the tap
-brew tap <your-github-user>/e3cli
+brew tap junlinwk/e3cli
 
 # Install
 brew install e3cli
@@ -63,12 +63,10 @@ pip install e3cli
 ### Option 4: From source (development)
 
 ```bash
-git clone https://github.com/<your-github-user>/e3cli.git
+git clone https://github.com/junlinwk/e3cli.git
 cd e3cli
 pip install -e ".[dev]"
 ```
-
-After any installation method, `e3cli` will be available as a system-wide command.
 
 ---
 
@@ -248,91 +246,6 @@ e3cli uses **Fernet symmetric encryption** (from the `cryptography` library) to 
 | `~/.e3cli/data/e3cli.db` | SQLite tracking DB (downloaded files, assignment status) |
 | `~/e3-downloads/` | Downloaded course materials |
 
----
-
-## Deployment Guide
-
-This section covers how to publish e3cli so users can `brew install` it.
-
-### Step 1: Create the GitHub repository
-
-```bash
-# Initialize git in the project directory
-cd /path/to/e3cli
-git init
-git add .
-git commit -m "Initial commit: e3cli v0.1.0"
-
-# Create the repo on GitHub, then:
-git remote add origin git@github.com:<your-user>/e3cli.git
-git push -u origin main
-```
-
-### Step 2: Create a release
-
-```bash
-# Tag the version
-git tag v0.1.0
-git push origin v0.1.0
-```
-
-This triggers the GitHub Actions `release.yml` workflow, which:
-1. Builds the Python package (`sdist` + `wheel`)
-2. Creates a GitHub Release with the built artifacts
-3. Generates the Homebrew formula
-
-### Step 3: Set up the Homebrew tap
-
-A Homebrew tap is a separate GitHub repo named `homebrew-e3cli`:
-
-```bash
-# Use the provided script
-GITHUB_USER=your-username ./scripts/setup-homebrew-tap.sh
-
-# Push the tap repo to GitHub
-cd homebrew-e3cli
-git init && git add . && git commit -m "Initial formula"
-git remote add origin git@github.com:<your-user>/homebrew-e3cli.git
-git push -u origin main
-```
-
-After this, users can install with:
-```bash
-brew tap <your-user>/e3cli
-brew install e3cli
-```
-
-### Step 4: Update the Homebrew formula on release
-
-After each new release, update the formula:
-
-```bash
-# 1. Generate updated formula with correct sha256
-python scripts/generate-formula.py v0.2.0 > Formula/e3cli.rb
-
-# 2. Copy to tap repo and push
-cp Formula/e3cli.rb ../homebrew-e3cli/Formula/
-cd ../homebrew-e3cli
-git add . && git commit -m "Update to v0.2.0" && git push
-```
-
-Or automate this via the `update-homebrew` job in `release.yml` (uncomment and configure the token).
-
-### Optional: Publish to PyPI
-
-```bash
-# Build
-python -m build
-
-# Upload (requires PyPI account + API token)
-twine upload dist/*
-```
-
-After publishing to PyPI, users can also install via:
-```bash
-pip install e3cli
-pipx install e3cli
-```
 
 ---
 
