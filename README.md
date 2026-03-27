@@ -68,6 +68,7 @@ cd e3cli
 pip install -e ".[dev]"
 ```
 
+## Update
 ---
 
 ## Quick Start
