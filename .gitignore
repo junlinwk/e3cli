@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/
+.venv/
+*.db
+.claude/
+
+# Credentials — never commit
+.e3cli/
+token
+*.enc
+key
+credentials.enc
+

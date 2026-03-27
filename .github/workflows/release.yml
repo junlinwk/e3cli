@@ -1,0 +1,64 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build tools
+        run: pip install build twine
+
+      - name: Build package
+        run: python -m build
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+
+      # 如果要發佈到 PyPI，取消下面的註解並設定 PYPI_API_TOKEN secret
+      # - name: Publish to PyPI
+      #   env:
+      #     TWINE_USERNAME: __token__
+      #     TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+      #   run: twine upload dist/*
+
+  update-homebrew:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generate formula
+        run: |
+          python scripts/generate-formula.py ${{ github.ref_name }} > /tmp/e3cli.rb
+          echo "Generated formula:"
+          cat /tmp/e3cli.rb
+
+      # 如果使用獨立的 homebrew-e3cli tap repo，取消下面的註解
+      # - name: Update Homebrew tap
+      #   uses: peter-evans/create-pull-request@v6
+      #   with:
+      #     token: ${{ secrets.TAP_GITHUB_TOKEN }}
+      #     repository: user/homebrew-e3cli
+      #     branch: update-${{ github.ref_name }}
+      #     title: "Update e3cli to ${{ github.ref_name }}"
+      #     body: "Automated formula update"
+      #     commit-message: "e3cli ${{ github.ref_name }}"
