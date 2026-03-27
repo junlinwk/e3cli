@@ -1,25 +1,50 @@
-# e3cli
+<p align="center">
+  <img src="https://img.shields.io/badge/python-3.11+-blue?logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey?logo=apple&logoColor=white" alt="Platform">
+  <img src="https://img.shields.io/github/license/junlinwk/e3cli?color=green" alt="License">
+  <img src="https://img.shields.io/github/v/tag/junlinwk/e3cli?label=version&color=orange" alt="Version">
+</p>
 
-NYCU E3 Moodle automation CLI -- sync courses, download materials, submit assignments from your terminal.
+<h1 align="center">e3cli</h1>
+
+<p align="center">
+  <b>NYCU E3 Moodle automation CLI</b><br>
+  Sync courses, download materials, submit assignments — all from your terminal.
+</p>
+
+<p align="center">
+  <a href="#installation">Install</a> &bull;
+  <a href="#quick-start">Quick Start</a> &bull;
+  <a href="#commands">Commands</a> &bull;
+  <a href="#security">Security</a> &bull;
+  <a href="./README_zh-TW.md">繁體中文</a>
+</p>
+
+---
+
+> **Intended use:** Finished your homework? Too lazy to open the browser? Submit it from CLI.
+>
+> ~~**Unintended use:** Let Claude Code auto-pull new assignments, finish them, and upload. (Please don't.)~~
 
 ## Features
 
-- **Login** -- authenticate via Moodle Web Service API, encrypted credential storage
-- **Courses** -- list all enrolled courses
-- **Assignments** -- view assignments, deadlines, submission status
-- **Download** -- batch download course materials, skip already-downloaded files
-- **Submit** -- upload and submit assignments from CLI
-- **Sync** -- one command to pull everything new (materials + assignment status)
-- **Schedule** -- cron-based automatic sync
+- **Login** — Moodle Web Service API authentication with encrypted credential storage
+- **Courses** — List all enrolled courses
+- **Assignments** — View assignments, deadlines, and submission status
+- **Download** — Batch download course materials, skip already-downloaded files
+- **Submit** — Upload and submit assignments directly from CLI
+- **Sync** — One command to pull everything new (materials + assignment status)
+- **Schedule** — Cron-based automatic sync
+- **Bilingual** — Full Chinese/English support
 
 ## Supported Platforms
 
 | Platform | Architecture | Status |
 |----------|-------------|--------|
-| macOS | Apple Silicon (ARM64) | Supported |
-| macOS | Intel (x86_64) | Supported |
-| Linux | x86_64 | Supported |
-| Linux | ARM64 | Supported |
+| macOS | Apple Silicon (ARM64) | :white_check_mark: Supported |
+| macOS | Intel (x86_64) | :white_check_mark: Supported |
+| Linux | x86_64 | :white_check_mark: Supported |
+| Linux | ARM64 | :white_check_mark: Supported |
 
 Requires **Python 3.11+**.
 
@@ -27,40 +52,26 @@ Requires **Python 3.11+**.
 
 ## Installation
 
-### Option 1: Homebrew (recommended for macOS/Linux)
+### Homebrew (recommended)
 
 ```bash
-# Add the tap
 brew tap junlinwk/e3cli
-
-# Install
 brew install e3cli
-
-# Verify
-e3cli version
 ```
 
-### Option 2: pipx (isolated install, recommended for Linux)
+### pipx
 
 ```bash
-# Install pipx if you don't have it
-brew install pipx   # or: apt install pipx
-pipx ensurepath
-
-# Install e3cli
-pipx install e3cli
-
-# Verify
-e3cli version
+pipx install git+https://github.com/junlinwk/e3cli.git
 ```
 
-### Option 3: pip
+### pip
 
 ```bash
-pip install e3cli
+pip install git+https://github.com/junlinwk/e3cli.git
 ```
 
-### Option 4: From source (development)
+### From source
 
 ```bash
 git clone https://github.com/junlinwk/e3cli.git
@@ -68,15 +79,15 @@ cd e3cli
 pip install -e ".[dev]"
 ```
 
-> After any installation method, `e3cli` will be available as a system-wide command.
+> After installation, `e3cli` is available as a system-wide command.
 
 ### Upgrade
 
-| Install method | Upgrade command |
-|---|---|
+| Method | Command |
+|--------|---------|
 | Homebrew | `brew update && brew upgrade e3cli` |
-| pipx (PyPI) | `pipx upgrade e3cli` |
 | pipx (GitHub) | `pipx install git+https://github.com/junlinwk/e3cli.git --force` |
+| pipx (PyPI) | `pipx upgrade e3cli` |
 | pip (PyPI) | `pip install e3cli --upgrade` |
 
 ---
@@ -84,8 +95,8 @@ pip install -e ".[dev]"
 ## Quick Start
 
 ```bash
-# 1. Login (first time)
-e3cli login --save        # --save encrypts and stores your credentials locally
+# 1. Login (first time — interactive setup wizard will guide you)
+e3cli login --save
 
 # 2. List your courses
 e3cli courses
@@ -184,6 +195,14 @@ e3cli schedule disable                 # Remove cron job
 e3cli schedule status                  # Show current schedule
 ```
 
+### `e3cli setup`
+
+Re-run the interactive setup wizard (language, Moodle URL, download directory, login).
+
+```bash
+e3cli setup
+```
+
 ### `e3cli version`
 
 ```bash
@@ -194,23 +213,25 @@ e3cli version
 
 ## Configuration
 
-Config file: `~/.e3cli/config.toml`
+Config file location: `~/.e3cli/config.toml`
 
 ```toml
 [moodle]
-url = "https://e3p.nycu.edu.tw"    # Your Moodle instance URL
-service = "moodle_mobile_app"       # Web service name (usually don't change)
+url = "https://e3p.nycu.edu.tw"
+service = "moodle_mobile_app"
 
 [storage]
-download_dir = "~/e3-downloads"     # Where to save course materials
-db_path = "~/.e3cli/data/e3cli.db"  # Tracking database
+download_dir = "~/e3-downloads"
 
 [schedule]
-interval_minutes = 60               # Sync interval for cron job
-notify = true                       # Desktop notifications (future)
+interval_minutes = 60
+notify = true
+
+[general]
+lang = "zh"    # "zh" or "en", or omit for auto-detect
 ```
 
-The config file is auto-created with defaults on first run. Edit it to customize behavior.
+Auto-created with defaults on first run. Edit to customize, or run `e3cli setup` to reconfigure interactively.
 
 ---
 
@@ -218,31 +239,36 @@ The config file is auto-created with defaults on first run. Edit it to customize
 
 ### Credential Storage
 
-e3cli uses **Fernet symmetric encryption** (from the `cryptography` library) to protect stored credentials:
+e3cli uses **PBKDF2-HMAC-SHA256** key derivation with integrity verification to protect stored credentials:
 
 ```
 ~/.e3cli/
-  key               # Random 256-bit encryption key (chmod 600)
-  credentials.enc   # Encrypted username + password (chmod 600)
-  token             # Moodle API token (chmod 600)
+  key               # 256-bit random encryption key  (chmod 600)
+  credentials.enc   # Encrypted username + password   (chmod 600)
+  token             # Moodle API token                (chmod 600)
 ```
 
-- Encryption key is randomly generated per machine and stored separately from credentials
-- All sensitive files are created with `chmod 600` (owner-only read/write)
-- Passwords are **never** stored in plaintext or passed as CLI arguments (uses `getpass`)
-- `e3cli logout` securely overwrites files with zeros before deletion
+| Measure | Detail |
+|---------|--------|
+| Encryption | PBKDF2-HMAC-SHA256 (100k iterations) + XOR stream cipher |
+| Integrity | HMAC-SHA256 verification on every read |
+| File permissions | `chmod 600` — owner-only read/write |
+| Password input | `getpass` — never appears in shell history or CLI args |
+| Logout | `e3cli logout` overwrites files with zeros before deletion |
+| Key separation | Encryption key and encrypted data stored in separate files |
 
-### What's NOT stored
+### What's NOT Stored
 
-- Your password is never written to shell history (interactive `getpass` prompt)
-- No credentials in `config.toml`
-- No credentials in environment variables
+- :x: No plaintext passwords on disk
+- :x: No credentials in `config.toml`
+- :x: No credentials in environment variables
+- :x: No credentials in shell history
 
 ### Recommendations
 
 - Use `e3cli login --save` only on machines you trust
 - Run `e3cli logout` when done on shared machines
-- The `~/.e3cli/` directory is in `.gitignore` -- never commit it
+- The `~/.e3cli/` directory is in `.gitignore` — never commit it
 
 ---
 
@@ -251,85 +277,36 @@ e3cli uses **Fernet symmetric encryption** (from the `cryptography` library) to 
 | Path | Purpose |
 |------|---------|
 | `~/.e3cli/config.toml` | User configuration |
-| `~/.e3cli/token` | Moodle API token (encrypted-equivalent, chmod 600) |
+| `~/.e3cli/token` | Moodle API token (chmod 600) |
 | `~/.e3cli/key` | Encryption key (chmod 600) |
 | `~/.e3cli/credentials.enc` | Encrypted credentials (chmod 600) |
-| `~/.e3cli/data/e3cli.db` | SQLite tracking DB (downloaded files, assignment status) |
+| `~/.e3cli/data/e3cli.db` | SQLite tracking DB |
 | `~/e3-downloads/` | Downloaded course materials |
-
----
-
-## Project Structure
-
-```
-e3cli/
-├── pyproject.toml              # Package metadata and dependencies
-├── Makefile                    # Dev shortcuts (make dev, make test, etc.)
-├── LICENSE                     # MIT License
-├── Formula/e3cli.rb            # Homebrew formula template
-├── scripts/
-│   ├── generate-formula.py     # Auto-generate formula from PyPI
-│   └── setup-homebrew-tap.sh   # Bootstrap Homebrew tap repo
-├── .github/workflows/
-│   ├── ci.yml                  # Test on push/PR (Linux + macOS, Py 3.11-3.13)
-│   └── release.yml             # Build + publish on tag push
-├── e3cli/
-│   ├── __init__.py
-│   ├── __main__.py             # python -m e3cli
-│   ├── cli.py                  # Typer CLI entry point
-│   ├── config.py               # ~/.e3cli/config.toml management
-│   ├── auth.py                 # Moodle token authentication
-│   ├── credential.py           # Encrypted credential storage
-│   ├── api/
-│   │   ├── client.py           # Moodle REST API client
-│   │   ├── site.py             # Site info
-│   │   ├── courses.py          # Course listing and contents
-│   │   ├── assignments.py      # Assignment queries and submission
-│   │   └── files.py            # File download
-│   ├── storage/
-│   │   ├── db.py               # SQLite schema and operations
-│   │   ├── models.py           # Data models
-│   │   └── tracking.py         # Download/assignment tracking
-│   ├── commands/
-│   │   ├── _common.py          # Shared utilities (get_client, get_db)
-│   │   ├── login.py            # e3cli login
-│   │   ├── logout.py           # e3cli logout
-│   │   ├── courses.py          # e3cli courses
-│   │   ├── assignments.py      # e3cli assignments
-│   │   ├── download.py         # e3cli download
-│   │   ├── submit.py           # e3cli submit
-│   │   ├── sync.py             # e3cli sync
-│   │   └── schedule.py         # e3cli schedule
-│   ├── scheduler/
-│   │   └── cron.py             # Crontab management
-│   └── ai/                     # Future: AI integration
-│       └── __init__.py
-└── tests/
-```
 
 ---
 
 ## Development
 
 ```bash
-# Clone and install in dev mode
 git clone https://github.com/junlinwk/e3cli.git
 cd e3cli
-make dev                    # pip install -e ".[dev]"
-
-# Run linter
-make lint
-
-# Run tests
-make test
-
-# Build distribution
-make build
+make dev       # pip install -e ".[dev]"
+make lint      # ruff check
+make test      # pytest
+make build     # python -m build
 ```
 
+## Roadmap
+
+- [ ] AI-powered material summarization
+- [ ] AI-assisted assignment drafting
+- [ ] Smart deadline notifications with priority scoring
+- [ ] Desktop notifications (Linux `notify-send`, macOS `osascript`)
+- [ ] Course filtering by semester
+- [ ] Parallel downloads
 
 ---
 
 ## License
 
-MIT
+[MIT](./LICENSE)
