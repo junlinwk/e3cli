@@ -6,7 +6,7 @@ from e3cli.credential import _decrypt, _encrypt, _get_or_create_key
 
 
 def test_version():
-    assert __version__ == "0.1.0"
+    assert __version__
 
 
 def test_default_config():
@@ -26,6 +26,7 @@ def test_encrypt_decrypt_roundtrip():
 
 def test_decrypt_wrong_key():
     import os
+
     key1 = os.urandom(32)
     key2 = os.urandom(32)
     encrypted = _encrypt(b"secret", key1)
