@@ -234,6 +234,30 @@ def _materials_view(client, db, cfg, cid, cname):
 
 # ─── Assignments View ────────────────────────────────────────────────────
 
+def _show_assignments_table(assign_list: list[tuple], title: str, show_course: bool = False):
+    """用 rich Table 顯示作業列表。assign_list: [(a, status, cname?), ...]"""
+    table = Table(title=title, show_lines=True)
+    table.add_column("#", style="cyan", width=4)
+    if show_course:
+        table.add_column(t("assign.col_course"), style="cyan")
+    table.add_column(t("assign.col_name"), style="bold")
+    table.add_column(t("assign.col_due"))
+    table.add_column(t("assign.col_status"))
+
+    for i, entry in enumerate(assign_list, 1):
+        a, status = entry[0], entry[1]
+        cname = entry[2] if len(entry) > 2 else ""
+        due = format_duedate(a.get("duedate", 0))
+        status_str = format_submission_status(status)
+        row = [str(i)]
+        if show_course:
+            row.append(cname)
+        row.extend([a["name"], due, status_str])
+        table.add_row(*row)
+
+    console.print(table)
+
+
 def _assignments_view(client, db, info, cid, cname):
     data = get_assignments(client, [cid])
     raw = []
@@ -245,27 +269,23 @@ def _assignments_view(client, db, info, cid, cname):
             raw.append((a, status))
 
     sorted_raw = sort_assignments(raw)
-    assign_list = []
-    items = []
-    for a, status in sorted_raw:
-        due = format_duedate(a.get("duedate", 0))
-        status_str = format_submission_status(status)
-        items.append(MenuItem(a["name"], key=str(len(assign_list)), description=f"{due}  {status_str}"))
-        assign_list.append(a)
 
-    if not assign_list:
+    if not sorted_raw:
         console.print(f"  [green]{t('assign.empty')}[/green]")
         _prompt(t("tui.back"))
         return
 
-    result = show_menu_fullscreen(items, title=f"{t('tui.assignments')} — {cname}")
+    _show_assignments_table(sorted_raw, f"{t('tui.assignments')} — {cname}")
 
-    if result.action in ("back", "quit"):
+    console.print(f"\n[dim]{t('tui.submit_select')} (# to submit, q to go back)[/dim]")
+    choice = _prompt()
+
+    if choice in ("q", "b", "back", ""):
         return
-    elif result.action == "select":
-        idx = int(result.key)
-        if 0 <= idx < len(assign_list):
-            _submit_interactive(client, db, assign_list[idx])
+    if choice.isdigit():
+        idx = int(choice) - 1
+        if 0 <= idx < len(sorted_raw):
+            _submit_interactive(client, db, sorted_raw[idx][0])
 
 
 def _all_assignments_view(client, db, info, courses):
@@ -288,33 +308,23 @@ def _all_assignments_view(client, db, info, courses):
             raw.append((a, status, cname))
 
     sorted_raw = sort_assignments(raw)
-    assign_list = []
-    items = []
-    for entry in sorted_raw:
-        a, status = entry[0], entry[1]
-        cname = entry[2] if len(entry) > 2 else ""
-        due = format_duedate(a.get("duedate", 0))
-        status_str = format_submission_status(status)
-        items.append(MenuItem(
-            f"[{cname}] {a['name']}",
-            key=str(len(assign_list)),
-            description=f"{due}  {status_str}",
-        ))
-        assign_list.append(a)
 
-    if not assign_list:
+    if not sorted_raw:
         console.print(f"  [green]{t('assign.empty')}[/green]")
         _prompt(t("tui.back"))
         return
 
-    result = show_menu_fullscreen(items, title=t("tui.assignments"))
+    _show_assignments_table(sorted_raw, t("tui.assignments"), show_course=True)
 
-    if result.action in ("back", "quit"):
+    console.print(f"\n[dim]{t('tui.submit_select')} (# to submit, q to go back)[/dim]")
+    choice = _prompt()
+
+    if choice in ("q", "b", "back", ""):
         return
-    elif result.action == "select":
-        idx = int(result.key)
-        if 0 <= idx < len(assign_list):
-            _submit_interactive(client, db, assign_list[idx])
+    if choice.isdigit():
+        idx = int(choice) - 1
+        if 0 <= idx < len(sorted_raw):
+            _submit_interactive(client, db, sorted_raw[idx][0])
 
 
 # ─── Submit Interactive ──────────────────────────────────────────────────

@@ -13,6 +13,7 @@
 
 from __future__ import annotations
 
+import re
 import sys
 import tty
 import termios
@@ -21,6 +22,14 @@ from dataclasses import dataclass
 from rich.console import Console
 
 console = Console()
+
+# 用於計算上次渲染了多少行，以便正確覆蓋
+_last_render_lines: int = 0
+
+
+def _strip_rich_markup(text: str) -> str:
+    """移除 rich markup tags，保留純文字。"""
+    return re.sub(r"\[/?[a-z_ ]+\]", "", text)
 
 
 @dataclass
@@ -82,8 +91,9 @@ def show_menu(
       action="select" + index: 使用者選了某個項目
       action="back": 使用者按 ← 或 q
       action="quit": 使用者按 Ctrl+C
-      action="search" + key: 使用者開始輸入搜尋
     """
+    global _last_render_lines
+
     if not items:
         return MenuResult("back")
 
@@ -91,14 +101,31 @@ def show_menu(
     search_mode = False
     search_text = ""
 
+    # 跳過 disabled items
+    while 0 <= cursor < len(items) and items[cursor].disabled:
+        cursor += 1
+    if cursor >= len(items):
+        cursor = 0
+
     while True:
         # 計算過濾後的項目
         if search_mode and search_text:
             query = search_text.lower()
             visible = [(i, item) for i, item in enumerate(items)
-                       if query in item.label.lower() or query in item.description.lower()]
+                       if query in _strip_rich_markup(item.label).lower()
+                       or query in _strip_rich_markup(item.description).lower()
+                       or item.disabled]  # 保留分組標題
         else:
             visible = list(enumerate(items))
+
+        # 確保 cursor 在範圍內且不在 disabled 上
+        if visible:
+            cursor = cursor % len(visible)
+            # 跳過 disabled
+            attempts = 0
+            while visible[cursor][1].disabled and attempts < len(visible):
+                cursor = (cursor + 1) % len(visible)
+                attempts += 1
 
         # 繪製
         _render_menu(visible, cursor, title, subtitle, search_mode, search_text)
@@ -107,13 +134,20 @@ def show_menu(
         key = _read_key()
 
         if key == "up":
-            cursor = (cursor - 1) % len(visible) if visible else 0
+            if visible:
+                cursor = (cursor - 1) % len(visible)
+                while visible[cursor][1].disabled:
+                    cursor = (cursor - 1) % len(visible)
         elif key == "down":
-            cursor = (cursor + 1) % len(visible) if visible else 0
+            if visible:
+                cursor = (cursor + 1) % len(visible)
+                while visible[cursor][1].disabled:
+                    cursor = (cursor + 1) % len(visible)
         elif key in ("enter", "right"):
             if visible and 0 <= cursor < len(visible):
                 real_idx = visible[cursor][0]
                 if not items[real_idx].disabled:
+                    _clear_render()
                     return MenuResult("select", real_idx, items[real_idx].key)
         elif key in ("left", "esc"):
             if search_mode:
@@ -121,10 +155,13 @@ def show_menu(
                 search_text = ""
                 cursor = 0
             else:
+                _clear_render()
                 return MenuResult("back")
         elif key in ("q",) and not search_mode:
+            _clear_render()
             return MenuResult("back")
         elif key == "quit":
+            _clear_render()
             return MenuResult("quit")
         elif key == "/" and not search_mode and search_enabled:
             search_mode = True
@@ -138,12 +175,19 @@ def show_menu(
         elif search_mode and len(key) == 1 and key.isprintable():
             search_text += key
             cursor = 0
-        elif not search_mode and len(key) == 1 and key.isprintable():
-            # 直接開始搜尋
-            if search_enabled:
-                search_mode = True
-                search_text = key
-                cursor = 0
+        elif not search_mode and len(key) == 1 and key.isprintable() and search_enabled:
+            search_mode = True
+            search_text = key
+            cursor = 0
+
+
+def _clear_render():
+    """清除上次渲染的內容。"""
+    global _last_render_lines
+    if _last_render_lines > 0:
+        sys.stdout.write(f"\033[{_last_render_lines}A\033[J")
+        sys.stdout.flush()
+        _last_render_lines = 0
 
 
 def _render_menu(
@@ -155,59 +199,63 @@ def _render_menu(
     search_text: str,
 ):
     """繪製選單到終端。"""
-    # 取得終端寬度
-    width = console.width
+    global _last_render_lines
 
-    # 清屏（移到最上方）
+    width = min(console.width, 80)
+    line_char = "─"
     output = []
 
     # 上分隔線
-    line_char = "─"
     if title:
-        pad = max(0, width - len(title) - 4)
+        clean_title = _strip_rich_markup(title)
+        pad = max(0, width - len(clean_title) - 4)
         left_pad = pad // 2
         right_pad = pad - left_pad
-        output.append(f"\033[36m{line_char * left_pad} {title} {line_char * right_pad}\033[0m")
+        output.append(f"\033[36m{line_char * left_pad} {clean_title} {line_char * right_pad}\033[0m")
     else:
         output.append(f"\033[36m{line_char * width}\033[0m")
 
     if subtitle:
-        output.append(f"\033[2m  {subtitle}\033[0m")
+        clean_sub = _strip_rich_markup(subtitle)
+        output.append(f"\033[2m  {clean_sub}\033[0m")
 
     output.append("")
 
     # 選項
     for vi, (real_idx, item) in enumerate(visible):
         is_selected = vi == cursor
-        prefix = "❯ " if is_selected else "  "
-        label = item.label
-        desc = f"  \033[2m{item.description}\033[0m" if item.description else ""
+        clean_label = _strip_rich_markup(item.label)
+        clean_desc = _strip_rich_markup(item.description)
 
-        if is_selected:
-            # 反白
-            output.append(f"\033[7m\033[36m{prefix}{label}\033[0m{desc}")
-        elif item.disabled:
-            output.append(f"\033[2m{prefix}{label}{desc}\033[0m")
+        if item.disabled:
+            output.append(f"\033[2m  {clean_label}\033[0m")
+        elif is_selected:
+            desc_part = f"  \033[0m\033[2m{clean_desc}\033[0m" if clean_desc else ""
+            output.append(f"\033[7m\033[36m❯ {clean_label}\033[0m{desc_part}")
         else:
-            output.append(f"{prefix}{label}{desc}")
+            desc_part = f"  \033[2m{clean_desc}\033[0m" if clean_desc else ""
+            output.append(f"  {clean_label}{desc_part}")
 
     output.append("")
 
-    # 搜尋列
+    # 搜尋列 / 操作提示
     if search_mode:
         output.append(f"\033[33m/ {search_text}\033[0m\033[5m▊\033[0m")
     else:
-        hints = "\033[2m↑↓ navigate  →/Enter select  ← back  / search  q quit\033[0m"
-        output.append(hints)
+        output.append("\033[2m↑↓ navigate  →/Enter select  ← back  / search  q quit\033[0m")
 
     # 下分隔線
     output.append(f"\033[36m{line_char * width}\033[0m")
 
-    # 輸出（先清屏再繪製）
-    total_lines = len(output)
-    sys.stdout.write(f"\033[{total_lines + 2}A\033[J")  # 往上移並清除
-    sys.stdout.write("\n".join(output) + "\n")
+    # 先清除上次渲染，再重新繪製
+    if _last_render_lines > 0:
+        sys.stdout.write(f"\033[{_last_render_lines}A\033[J")
+
+    rendered = "\n".join(output) + "\n"
+    sys.stdout.write(rendered)
     sys.stdout.flush()
+
+    _last_render_lines = len(output)
 
 
 def show_menu_fullscreen(
@@ -219,9 +267,15 @@ def show_menu_fullscreen(
     """
     全螢幕版選單 — 先印足夠空行再開始，避免覆蓋既有內容。
     """
+    global _last_render_lines
+    _last_render_lines = 0
+
     # 預留空間
     needed = len(items) + 8
     sys.stdout.write("\n" * needed)
+    # 往回移，讓第一次 render 從正確位置開始
+    sys.stdout.write(f"\033[{needed}A")
     sys.stdout.flush()
+    _last_render_lines = needed
 
     return show_menu(items, title, subtitle, search_enabled=search_enabled)
