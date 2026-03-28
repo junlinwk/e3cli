@@ -1,0 +1,20 @@
+0000000000000000000000000000000000000000 3f0235e32813f74985f0363e64a110093d979e2f Lin Jun <linjun@Jun-Lin-MacBook.local> 1774633204 +0800	commit (initial): feat: e3cli v0.1.0 — NYCU E3 Moodle automation CLI
+3f0235e32813f74985f0363e64a110093d979e2f 0000000000000000000000000000000000000000 Lin Jun <linjun@Jun-Lin-MacBook.local> 1774633232 +0800	Branch: renamed refs/heads/main to refs/heads/main
+3f0235e32813f74985f0363e64a110093d979e2f 3f0235e32813f74985f0363e64a110093d979e2f Lin Jun <linjun@Jun-Lin-MacBook.local> 1774633232 +0800	Branch: renamed refs/heads/main to refs/heads/main
+3f0235e32813f74985f0363e64a110093d979e2f 43cead7a00c7ef98e1d5c9c86e50a3ccde712277 junlinwk <tapjun888@gmail.com> 1774633549 +0800	commit: Tests
+43cead7a00c7ef98e1d5c9c86e50a3ccde712277 38d062de47938882cc8c951cfcd18266bfa834d0 junlinwk <tapjun888@gmail.com> 1774636578 +0800	commit: fix : selection text
+38d062de47938882cc8c951cfcd18266bfa834d0 537671d097d835bda94f0460295ce1cf49eda99a junlinwk <tapjun888@gmail.com> 1774640429 +0800	commit: feat: bilingual support, stdlib encryption, Homebrew fix, setup wizard
+537671d097d835bda94f0460295ce1cf49eda99a 1c1765c4b372bd085c6224472de72f66e8d9fbe9 junlinwk <tapjun888@gmail.com> 1774640905 +0800	commit: ci:automate Homebrew formula update on release
+1c1765c4b372bd085c6224472de72f66e8d9fbe9 19f9906c2882926f53e77b4be8be579906954a69 junlinwk <tapjun888@gmail.com> 1774641894 +0800	commit: feat: add pip install
+19f9906c2882926f53e77b4be8be579906954a69 ae7c0c0693884ee9968bd46c7e3c1c4801c93f07 junlinwk <tapjun888@gmail.com> 1774642406 +0800	commit: fix: versions error
+ae7c0c0693884ee9968bd46c7e3c1c4801c93f07 d1eccedbd9604b59bcc247b6f8a177df5486ce57 junlinwk <tapjun888@gmail.com> 1774642432 +0800	commit: release: v0.3.1
+d1eccedbd9604b59bcc247b6f8a177df5486ce57 cf286c5bf7cffc4bf93b51554d4299845172df84 junlinwk <tapjun888@gmail.com> 1774642745 +0800	commit: feat: README Update
+cf286c5bf7cffc4bf93b51554d4299845172df84 d0aa218f92135250fa46b8490c68f4e77846b1b1 junlinwk <tapjun888@gmail.com> 1774643032 +0800	commit: ci: dynamic version fix
+d0aa218f92135250fa46b8490c68f4e77846b1b1 8558de1a164b671ae0c5e9867140f4d105b26c71 junlinwk <tapjun888@gmail.com> 1774643051 +0800	commit: release: v0.3.2
+8558de1a164b671ae0c5e9867140f4d105b26c71 254d6ec800e32759015479a68a3afd096ee12680 junlinwk <tapjun888@gmail.com> 1774645204 +0800	commit: feat: README update
+254d6ec800e32759015479a68a3afd096ee12680 50f89469bbe802dad848dcfeb2a8e447d4cd5787 junlinwk <tapjun888@gmail.com> 1774712819 +0800	commit: feat: interactive TUI, semester filter, agent prompt
+50f89469bbe802dad848dcfeb2a8e447d4cd5787 9e9190183a3e710fd6a3caabafda0395aacc4907 junlinwk <tapjun888@gmail.com> 1774713638 +0800	commit: release: v0.4.0
+9e9190183a3e710fd6a3caabafda0395aacc4907 9b8451b0fde38dfc5250c52aab3ef3fd30ef616d junlinwk <tapjun888@gmail.com> 1774714502 +0800	commit: fix: add transitive dependencies
+9b8451b0fde38dfc5250c52aab3ef3fd30ef616d 2d4c64fc2752b1356569f24e6f3d53cfd8ff3236 junlinwk <tapjun888@gmail.com> 1774714513 +0800	commit: release: v0.4.1
+2d4c64fc2752b1356569f24e6f3d53cfd8ff3236 5f96e4a89ab06b40be8c45cd0d975bdc2f957064 junlinwk <tapjun888@gmail.com> 1774714973 +0800	commit: fix: add transitive dependencies
+5f96e4a89ab06b40be8c45cd0d975bdc2f957064 65011e04aeddd4c893a7a64b7ef745e9ad1af3c3 junlinwk <tapjun888@gmail.com> 1774714987 +0800	commit: release: v0.4.3

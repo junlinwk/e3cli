@@ -34,7 +34,9 @@ class ScheduleConfig:
 
 @dataclass
 class GeneralConfig:
-    lang: str = ""  # "" = auto-detect, "zh", "en"
+    lang: str = ""                   # "" = auto-detect, "zh", "en"
+    semester_format: str = "nycu"    # "nycu", "ntu", "western", "none", or custom regex
+    alias: str = ""                  # custom command alias (e.g. "moodle")
 
 
 @dataclass
@@ -80,6 +82,12 @@ def load_config() -> Config:
         if "general" in data:
             g = data["general"]
             cfg.general.lang = g.get("lang", cfg.general.lang)
+            cfg.general.semester_format = g.get("semester_format", cfg.general.semester_format)
+            cfg.general.alias = g.get("alias", cfg.general.alias)
+
+    # 套用學期格式
+    from e3cli.semester import set_semester_format
+    set_semester_format(cfg.general.semester_format)
 
     return cfg
 

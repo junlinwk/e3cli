@@ -20,6 +20,23 @@ def get_submission_status(client: MoodleClient, assignid: int) -> dict:
     return client.call("mod_assign_get_submission_status", assignid=assignid)
 
 
+def get_submission_status_text(client: MoodleClient, assignid: int) -> str:
+    """
+    取得作業提交狀態的文字描述。
+
+    回傳: "submitted", "draft", "new", "reopened", 或 "unknown"
+    """
+    try:
+        data = get_submission_status(client, assignid)
+        return (
+            data.get("lastattempt", {})
+            .get("submission", {})
+            .get("status", "new")
+        )
+    except Exception:
+        return "unknown"
+
+
 def save_submission(client: MoodleClient, assignid: int, draft_itemid: int, text: str = "") -> dict:
     """
     提交作業（檔案已上傳到 draft area 後）。

@@ -75,6 +75,11 @@ _STRINGS: dict[str, dict[str, str]] = {
     "assign.expired": {"zh": "已過期", "en": "Expired"},
     "assign.days_left": {"zh": "{n}天後", "en": "in {n} days"},
     "assign.empty": {"zh": "沒有符合條件的作業。", "en": "No matching assignments."},
+    "assign.submitted": {"zh": "已繳交", "en": "Submitted"},
+    "assign.draft_status": {"zh": "草稿", "en": "Draft"},
+    "assign.not_submitted": {"zh": "未繳交", "en": "Not submitted"},
+    "assign.reopened": {"zh": "重新開放", "en": "Reopened"},
+    "assign.checking_status": {"zh": "正在查詢繳交狀態...", "en": "Checking submission status..."},
     "assign.opt_due_soon": {"zh": "只顯示 N 天內到期的作業", "en": "Show assignments due within N days"},
 
     # === Download ===
