@@ -229,7 +229,7 @@ _STRINGS: dict[str, dict[str, str]] = {
     "tui.shell_mode": {"zh": "終端模式 — 輸入指令，輸入 exit 或按 Ctrl+D 返回 e3cli", "en": "Shell mode — type commands, type exit or Ctrl+D to return"},
     "tui.confirm_submit": {"zh": "確認提交 {f} 到 {a}？", "en": "Submit {f} to {a}?"},
     "tui.submit_cancelled": {"zh": "已取消提交", "en": "Submission cancelled"},
-    "tui.press_enter": {"zh": "按 Enter 繼續...", "en": "Press Enter to continue..."},
+    "tui.press_enter": {"zh": "Enter/← 返回", "en": "Enter/← to go back"},
     "tui.new_assign_alert": {"zh": "🔔 有 {n} 個新作業！", "en": "🔔 {n} new assignment(s)!"},
     "tui.sync_courses": {"zh": "同步課程", "en": "Sync courses"},
     "tui.select_sync": {"zh": "選擇要同步的課程", "en": "Select courses to sync"},

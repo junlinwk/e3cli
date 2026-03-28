@@ -46,7 +46,7 @@ app.add_typer(announcements_cli_app, name="announcements", help=t("cli.announcem
 
 @app.command()
 def version():
-    """Show version."""
+    """Show version"""
     typer.echo(f"e3cli {__version__}")
 
 

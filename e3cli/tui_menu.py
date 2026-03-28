@@ -42,10 +42,11 @@ class MenuItem:
 
 class MenuResult:
     """選單結果。"""
-    def __init__(self, action: str, index: int = -1, key: str = ""):
+    def __init__(self, action: str, index: int = -1, key: str = "", cursor: int = 0):
         self.action = action   # "select", "back", "quit", "search"
         self.index = index
         self.key = key
+        self.cursor = cursor  # 最後的 cursor 位置，供下次恢復
 
 
 def _read_key() -> str:
@@ -148,7 +149,7 @@ def show_menu(
                 real_idx = visible[cursor][0]
                 if not items[real_idx].disabled:
                     _clear_render()
-                    return MenuResult("select", real_idx, items[real_idx].key)
+                    return MenuResult("select", real_idx, items[real_idx].key, cursor=cursor)
         elif key in ("left", "esc"):
             if search_mode:
                 search_mode = False
@@ -156,13 +157,13 @@ def show_menu(
                 cursor = 0
             else:
                 _clear_render()
-                return MenuResult("back")
+                return MenuResult("back", cursor=cursor)
         elif key in ("q",) and not search_mode:
             _clear_render()
-            return MenuResult("back")
+            return MenuResult("back", cursor=cursor)
         elif key == "quit":
             _clear_render()
-            return MenuResult("quit")
+            return MenuResult("quit", cursor=cursor)
         elif key == "/" and not search_mode and search_enabled:
             search_mode = True
             search_text = ""
@@ -258,11 +259,30 @@ def _render_menu(
     _last_render_lines = len(output)
 
 
+def wait_for_back(prompt_text: str = "") -> None:
+    """等待使用者按 Enter、← 或 q 返回。支援方向鍵。"""
+    if prompt_text:
+        sys.stdout.write(f"\033[2m{prompt_text}\033[0m")
+        sys.stdout.flush()
+    else:
+        sys.stdout.write("\033[2mEnter/← to go back\033[0m")
+        sys.stdout.flush()
+
+    while True:
+        key = _read_key()
+        if key in ("enter", "left", "q", "esc", "quit"):
+            # 清除提示行
+            sys.stdout.write("\r\033[K")
+            sys.stdout.flush()
+            return
+
+
 def show_menu_fullscreen(
     items: list[MenuItem],
     title: str = "",
     subtitle: str = "",
     search_enabled: bool = True,
+    selected: int = 0,
 ) -> MenuResult:
     """
     全螢幕版選單 — 先印足夠空行再開始，避免覆蓋既有內容。
@@ -278,4 +298,4 @@ def show_menu_fullscreen(
     sys.stdout.flush()
     _last_render_lines = needed
 
-    return show_menu(items, title, subtitle, search_enabled=search_enabled)
+    return show_menu(items, title, subtitle, selected=selected, search_enabled=search_enabled)

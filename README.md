@@ -8,15 +8,17 @@
 <h1 align="center">e3cli</h1>
 
 <p align="center">
-  <b>NYCU E3 Moodle automation CLI</b><br>
-  Sync courses, download materials, submit assignments — all from your terminal.
+  <b>Moodle automation CLI — works with any Moodle instance</b><br>
+  Sync courses, download materials, submit assignments, view announcements — all from your terminal.
 </p>
 
 <p align="center">
   <a href="#installation">Install</a> &bull;
   <a href="#quick-start">Quick Start</a> &bull;
   <a href="#commands">Commands</a> &bull;
+  <a href="#interactive-mode">Interactive</a> &bull;
   <a href="#security">Security</a> &bull;
+  <a href="#claude-code-integration">Claude Code</a> &bull;
   <a href="./README_zh-TW.md">繁體中文</a>
 </p>
 
@@ -29,13 +31,18 @@
 ## Features
 
 - **Login** — Moodle Web Service API authentication with encrypted credential storage
-- **Courses** — List all enrolled courses
-- **Assignments** — View assignments, deadlines, and submission status
-- **Download** — Batch download course materials, skip already-downloaded files
-- **Submit** — Upload and submit assignments directly from CLI
+- **Courses** — List enrolled courses grouped by semester, view course intro
+- **Assignments** — View assignments with descriptions, deadlines, submission status, and attachments
+- **Download** — Batch download course materials (current semester by default)
+- **Submit / Edit** — Upload, submit, and re-upload (overwrite) assignments
+- **Announcements** — View course announcements and their content
+- **Members** — List course members (teachers and students)
+- **Messaging** — Send Moodle messages to course members
 - **Sync** — One command to pull everything new (materials + assignment status)
 - **Schedule** — Cron-based automatic sync
+- **Interactive TUI** — Full arrow-key interactive interface (`e3cli i`)
 - **Bilingual** — Full Chinese/English support
+- **Multi-school** — Works with any Moodle instance (configurable semester format)
 
 ## Supported Platforms
 
@@ -102,7 +109,7 @@ e3cli login --save
 e3cli courses
 
 # 3. Download all course materials
-e3cli download --all
+e3cli download
 
 # 4. Check assignments and deadlines
 e3cli assignments
@@ -110,8 +117,8 @@ e3cli assignments
 # 5. Submit an assignment
 e3cli submit <assignment-id> homework.pdf
 
-# 6. Enable automatic sync (every hour)
-e3cli schedule enable
+# 6. Launch interactive mode
+e3cli i
 ```
 
 ---
@@ -139,28 +146,34 @@ e3cli logout
 
 ### `e3cli courses`
 
-List all enrolled courses in a formatted table.
+List enrolled courses grouped by semester.
 
 ```bash
-e3cli courses
+e3cli courses                  # Current semester only
+e3cli courses --all            # All semesters
+e3cli courses --semester 1142  # Specific semester
 ```
 
 ### `e3cli assignments`
 
-View assignments with deadlines and submission status.
+View assignments with deadlines, submission status, descriptions, and attachment counts. Sorted by urgency (upcoming first, expired middle, submitted last).
 
 ```bash
-e3cli assignments                  # All assignments
+e3cli assignments                  # Current semester
 e3cli assignments --due-soon 7     # Due within 7 days
+e3cli assignments --all            # All semesters
+e3cli assignments --detail <ID>    # Full description + attachments for one assignment
 ```
 
 ### `e3cli download`
 
-Download course materials to local disk.
+Download course materials to local disk (current semester by default).
 
 ```bash
-e3cli download --all               # All courses
-e3cli download --course "OS"       # Filter by course name/code
+e3cli download                     # Current semester (default)
+e3cli download --all               # All semesters
+e3cli download --course "OS"       # Fuzzy match by course name/code
+e3cli download --select            # Interactive course selection
 ```
 
 Files are saved to `~/e3-downloads/<course>/<section>/` by default. Already-downloaded files are skipped automatically (tracked via SQLite).
@@ -175,13 +188,43 @@ e3cli submit <assignment-id> report.pdf --text "Some notes"
 e3cli submit <assignment-id> late-hw.pdf --force     # Submit past deadline
 ```
 
+Re-submitting to the same assignment ID will overwrite the previous submission.
+
+### `e3cli announcements`
+
+View course announcements.
+
+```bash
+e3cli announcements -c "OS"                # List announcements
+e3cli announcements -c "OS" --detail <ID>  # View full content + attachments
+```
+
+### `e3cli members`
+
+List course members with roles and email.
+
+```bash
+e3cli members -c "OS"          # Teachers listed first
+```
+
+### `e3cli message`
+
+Send a Moodle message to a user (recipient receives notification based on their settings).
+
+```bash
+e3cli message <user-id> "Hello"    # Direct message
+e3cli message <user-id>            # Interactive multi-line input
+```
+
 ### `e3cli sync`
 
 Pull all new materials and update assignment status in one command.
 
 ```bash
-e3cli sync                # Interactive output
-e3cli sync --quiet        # Silent mode (for cron)
+e3cli sync                     # Current semester (default)
+e3cli sync --all               # All semesters
+e3cli sync --course "OS"       # Specific course
+e3cli sync --quiet             # Silent mode (for cron)
 ```
 
 ### `e3cli schedule`
@@ -197,7 +240,7 @@ e3cli schedule status                  # Show current schedule
 
 ### `e3cli setup`
 
-Re-run the interactive setup wizard (language, Moodle URL, download directory, login).
+Re-run the interactive setup wizard (language, Moodle URL, semester format, alias, download directory, login).
 
 ```bash
 e3cli setup
@@ -208,6 +251,66 @@ e3cli setup
 ```bash
 e3cli version
 ```
+
+---
+
+## Interactive Mode
+
+Launch with `e3cli i` for a full TUI experience with arrow-key navigation:
+
+```
+╭──────────────── e3cli v0.5.0 ────────────────╮
+│  王小明  |  114學年第2學期  |  6 courses      │
+╰──────────────────────────────────────────────╯
+
+────────────────── 主選單 ──────────────────────
+❯ 選擇課程 (114學年第2學期)
+  選擇課程 (所有學期)
+  作業
+  同步課程
+  離開
+
+↑↓ navigate  →/Enter select  ← back  / search
+────────────────────────────────────────────────
+```
+
+### Navigation
+
+| Key | Action |
+|-----|--------|
+| `↑` `↓` | Move selection |
+| `→` / `Enter` | Enter selected item |
+| `←` / `Esc` | Go back |
+| `/` or type | Search / filter |
+| `q` | Quit / back |
+
+### Course Menu
+
+Enter a course to access:
+- **Course Intro** — View course description
+- **Materials** — Browse and download files (with download status)
+- **Assignments** — View with descriptions, attachments, submission status; submit or re-upload
+- **Announcements** — Read course announcements
+- **Members** — View member list, send messages directly
+- **Grades** — View grade items
+
+### Assignment Detail
+
+Select an assignment to see:
+- Full description (HTML rendered as text)
+- Attachment list with download
+- Currently submitted files
+- Submit (`s`) or Edit/re-upload (`e`) with tab-completion file picker
+- Shell mode (`!`) for terminal commands within the file picker
+
+### File Picker Features
+
+When submitting or re-uploading:
+- Shows current directory and file listing
+- **Tab completion** for file paths (like your shell)
+- **`!command`** to run a shell command (e.g., `!ls -la`)
+- **`!`** alone to enter interactive shell mode (type `exit` to return)
+- Confirmation prompt before uploading
 
 ---
 
@@ -228,8 +331,18 @@ interval_minutes = 60
 notify = true
 
 [general]
-lang = "zh"    # "zh" or "en", or omit for auto-detect
+lang = "zh"              # "zh" or "en", or omit for auto-detect
+semester_format = "nycu"  # "nycu", "western", "none"
+alias = ""                # custom command name (e.g. "moodle")
 ```
+
+### Semester Format
+
+| Format | Schools | Example |
+|--------|---------|---------|
+| `nycu` (default) | NYCU, NTU, and other Taiwan universities | `1142` = year 114, semester 2 |
+| `western` | Western year-based systems | `2025` |
+| `none` | Any school (no filtering) | All courses treated as current |
 
 Auto-created with defaults on first run. Edit to customize, or run `e3cli setup` to reconfigure interactively.
 
@@ -272,6 +385,21 @@ e3cli uses **PBKDF2-HMAC-SHA256** key derivation with integrity verification to 
 
 ---
 
+## Claude Code Integration
+
+This project includes a `CLAUDE.md` file that teaches [Claude Code](https://claude.ai/code) how to use e3cli as an automated assistant. When Claude Code is invoked in this project directory, it can:
+
+- Sync and check for new assignments (`e3cli sync`)
+- Read assignment descriptions and downloaded materials
+- Help complete assignments (with human oversight)
+- Submit completed work (`e3cli submit`)
+
+See [`CLAUDE.md`](./CLAUDE.md) and [`e3cli/agent_prompt.md`](./e3cli/agent_prompt.md) for the full agent automation guide.
+
+> **Note:** Claude Code will always ask for confirmation before submitting assignments.
+
+---
+
 ## Local Data
 
 | Path | Purpose |
@@ -298,11 +426,17 @@ make build     # python -m build
 
 ## Roadmap
 
+- [x] Interactive TUI with arrow-key navigation
+- [x] Semester filtering (current semester by default)
+- [x] Multi-school Moodle support
+- [x] Assignment descriptions and attachments
+- [x] Course announcements
+- [x] Course members and messaging
+- [x] Edit/re-upload submissions
 - [ ] AI-powered material summarization
 - [ ] AI-assisted assignment drafting
 - [ ] Smart deadline notifications with priority scoring
 - [ ] Desktop notifications (Linux `notify-send`, macOS `osascript`)
-- [ ] Course filtering by semester
 - [ ] Parallel downloads
 
 ---

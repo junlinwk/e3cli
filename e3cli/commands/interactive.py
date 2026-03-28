@@ -33,7 +33,7 @@ from e3cli.semester import (
     get_current_semester_code,
     group_by_semester,
 )
-from e3cli.tui_menu import MenuItem, show_menu_fullscreen
+from e3cli.tui_menu import MenuItem, show_menu_fullscreen, wait_for_back
 
 console = Console()
 app = typer.Typer()
@@ -52,8 +52,8 @@ def _prompt(text: str = "") -> str:
 
 
 def _wait_enter():
-    """按 Enter 繼續。"""
-    _prompt(t("tui.press_enter"))
+    """按 Enter、← 或 q 返回。支援方向鍵。"""
+    wait_for_back(t("tui.press_enter") + " ")
 
 
 def _enter_shell():
@@ -117,6 +117,7 @@ def _main_menu(client, db, cfg, info, all_courses):
     sem = format_semester(get_current_semester_code())
     user = info.get("fullname", "")
 
+    last_cursor = 0
     while True:
         console.print()
         console.print(Panel(
@@ -133,7 +134,8 @@ def _main_menu(client, db, cfg, info, all_courses):
             MenuItem(t("tui.quit"), key="quit"),
         ]
 
-        result = show_menu_fullscreen(items, title=t("tui.main_menu"), subtitle="↑↓ ←→ Enter / q")
+        result = show_menu_fullscreen(items, title=t("tui.main_menu"), subtitle="↑↓ ←→ Enter / q", selected=last_cursor)
+        last_cursor = result.cursor
 
         if result.action == "quit" or result.key == "quit":
             break
@@ -152,6 +154,7 @@ def _main_menu(client, db, cfg, info, all_courses):
 # ─── Course List ─────────────────────────────────────────────────────────
 
 def _course_list_menu(client, db, cfg, info, courses, show_all=False):
+    last_cursor = 0
     while True:
         items = []
         flat_list = []
@@ -179,12 +182,12 @@ def _course_list_menu(client, db, cfg, info, courses, show_all=False):
                 ))
                 flat_list.append(c)
 
-        result = show_menu_fullscreen(items, title=t("tui.select_course"), subtitle=t("tui.search_hint"))
+        result = show_menu_fullscreen(items, title=t("tui.select_course"), subtitle=t("tui.search_hint"), selected=last_cursor)
+        last_cursor = result.cursor
 
         if result.action in ("back", "quit"):
             break
         elif result.action == "select":
-            # 找到對應的課程
             target_id = result.key
             course = next((c for c in flat_list if str(c["id"]) == target_id), None)
             if course:
@@ -197,10 +200,10 @@ def _course_detail_menu(client, db, cfg, info, course):
     cid = course["id"]
     cname = course.get("shortname", "")
     cfull = course.get("fullname", cname)
+    last_cursor = 0
 
     while True:
         console.print()
-        # 顯示課程簡介（如果有）
         summary = course.get("summary", "")
         if summary:
             short_intro = _strip_html(summary)
@@ -224,7 +227,8 @@ def _course_detail_menu(client, db, cfg, info, course):
             MenuItem(t("tui.back"), key="back"),
         ]
 
-        result = show_menu_fullscreen(items, title=cfull, search_enabled=False)
+        result = show_menu_fullscreen(items, title=cfull, search_enabled=False, selected=last_cursor)
+        last_cursor = result.cursor
 
         if result.action in ("back", "quit") or result.key == "back":
             break
