@@ -29,11 +29,12 @@ jobs:
           files: dist/*
           generate_release_notes: true
 
-      - name: Publish to PyPI
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        run: pip install twine && twine upload dist/*
+      # Uncomment after setting PYPI_API_TOKEN secret
+      # - name: Publish to PyPI
+      #   env:
+      #     TWINE_USERNAME: __token__
+      #     TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+      #   run: pip install twine && twine upload dist/*
 
   update-homebrew:
     needs: release
@@ -58,53 +59,106 @@ jobs:
           token: ${{ secrets.TAP_GITHUB_TOKEN }}
           path: homebrew-tap
 
-      - name: Update formula
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generate formula with all transitive dependencies
         run: |
-          cat > homebrew-tap/Formula/e3cli.rb << 'FORMULA_EOF'
-          class E3cli < Formula
-            include Language::Python::Virtualenv
+          python3 - "${{ github.repository }}" "${{ steps.sha.outputs.url }}" "${{ steps.sha.outputs.sha256 }}" << 'PYSCRIPT'
+          import json, re, sys, urllib.request
 
-            desc "NYCU E3 Moodle automation CLI — sync courses, download materials, submit assignments"
-            homepage "https://github.com/${{ github.repository }}"
-            url "${{ steps.sha.outputs.url }}"
-            sha256 "${{ steps.sha.outputs.sha256 }}"
-            license "MIT"
+          repo, tarball_url, tarball_sha = sys.argv[1], sys.argv[2], sys.argv[3]
 
-            depends_on "python@3.12"
-          FORMULA_EOF
-
-          # Append dependency resources from PyPI
-          python3 -c "
-          import json, urllib.request
-          deps = ['typer', 'requests', 'rich']
-          for pkg in deps:
-              info = json.loads(urllib.request.urlopen(f'https://pypi.org/pypi/{pkg}/json').read())
-              ver = info['info']['version']
-              for f in info['releases'][ver]:
-                  if f['packagetype'] == 'sdist':
-                      print(f'')
-                      print(f'  resource \"{pkg}\" do')
-                      print(f'    url \"{f[\"url\"]}\"')
-                      print(f'    sha256 \"{f[\"digests\"][\"sha256\"]}\"')
-                      print(f'  end')
+          def get_info(pkg):
+              pkg_normalized = re.sub(r'[-_.]+', '-', pkg).lower()
+              try:
+                  data = json.loads(urllib.request.urlopen(f"https://pypi.org/pypi/{pkg_normalized}/json").read())
+              except Exception:
+                  return None
+              ver = data["info"]["version"]
+              requires = data["info"].get("requires_dist") or []
+              deps = []
+              for r in requires:
+                  if "extra ==" in r:
+                      continue
+                  # Extract package name (before any version specifier or marker)
+                  m = re.match(r'^([A-Za-z0-9]([A-Za-z0-9._-]*[A-Za-z0-9])?)', r)
+                  if m:
+                      deps.append(m.group(1).lower())
+              sdist_url, sha = "", ""
+              for f in data["releases"].get(ver, []):
+                  if f["packagetype"] == "sdist":
+                      sdist_url, sha = f["url"], f["digests"]["sha256"]
                       break
-          " >> homebrew-tap/Formula/e3cli.rb
+              return {"name": pkg_normalized, "deps": deps, "url": sdist_url, "sha256": sha}
 
-          # Append install and test blocks
-          cat >> homebrew-tap/Formula/e3cli.rb << 'TAIL_EOF'
+          # Resolve ALL transitive dependencies
+          seen = set()
+          queue = ["typer", "requests", "rich"]
+          resources = []
 
-            def install
-              virtualenv_install_with_resources
-            end
+          while queue:
+              pkg = queue.pop(0)
+              key = re.sub(r'[-_.]+', '_', pkg).lower()
+              if key in seen:
+                  continue
+              seen.add(key)
+              info = get_info(pkg)
+              if info is None:
+                  print(f"WARNING: Could not resolve {pkg}", file=sys.stderr)
+                  continue
+              if info["url"]:
+                  resources.append(info)
+              for d in info["deps"]:
+                  dk = re.sub(r'[-_.]+', '_', d).lower()
+                  if dk not in seen:
+                      queue.append(d)
 
-            test do
-              assert_match "e3cli", shell_output("#{bin}/e3cli version")
-            end
-          end
-          TAIL_EOF
+          # Build formula
+          lines = [
+              'class E3cli < Formula',
+              '  include Language::Python::Virtualenv',
+              '',
+              '  desc "NYCU E3 Moodle automation CLI — sync courses, download materials, submit assignments"',
+              f'  homepage "https://github.com/{repo}"',
+              f'  url "{tarball_url}"',
+              f'  sha256 "{tarball_sha}"',
+              '  license "MIT"',
+              '',
+              '  depends_on "python@3.12"',
+          ]
 
-          echo "=== Generated formula ==="
-          cat homebrew-tap/Formula/e3cli.rb
+          for r in resources:
+              lines += [
+                  '',
+                  f'  resource "{r["name"]}" do',
+                  f'    url "{r["url"]}"',
+                  f'    sha256 "{r["sha256"]}"',
+                  '  end',
+              ]
+
+          lines += [
+              '',
+              '  def install',
+              '    virtualenv_install_with_resources',
+              '  end',
+              '',
+              '  test do',
+              '    assert_match "e3cli", shell_output("#{bin}/e3cli version")',
+              '  end',
+              'end',
+              '',
+          ]
+
+          formula = "\n".join(lines)
+          with open("homebrew-tap/Formula/e3cli.rb", "w") as f:
+              f.write(formula)
+
+          print("=== Generated formula ===")
+          print(formula)
+          print(f"\nTotal resources: {len(resources)}", file=sys.stderr)
+          PYSCRIPT
 
       - name: Push updated formula
         run: |
