@@ -172,6 +172,58 @@ _STRINGS: dict[str, dict[str, str]] = {
         "en": "Not logged in. Run e3cli login first.",
     },
     "common.no_courses": {"zh": "沒有課程。", "en": "No courses."},
+
+    # === Semester ===
+    "sem.current": {"zh": "當期課程 ({sem})", "en": "Current semester ({sem})"},
+    "sem.all_semesters": {"zh": "所有學期", "en": "All semesters"},
+    "sem.other": {"zh": "其他", "en": "Other"},
+
+    # === Interactive TUI ===
+    "tui.title": {"zh": "E3 互動式介面", "en": "E3 Interactive"},
+    "tui.main_menu": {"zh": "主選單", "en": "Main Menu"},
+    "tui.select_course": {"zh": "選擇課程", "en": "Select course"},
+    "tui.search_hint": {"zh": "輸入課程名稱或代碼搜尋，按 Enter 進入，q 返回", "en": "Type to search, Enter to select, q to go back"},
+    "tui.course_menu": {"zh": "課程選單", "en": "Course Menu"},
+    "tui.materials": {"zh": "教材", "en": "Materials"},
+    "tui.assignments": {"zh": "作業", "en": "Assignments"},
+    "tui.grades": {"zh": "成績", "en": "Grades"},
+    "tui.download_all": {"zh": "下載所有教材", "en": "Download all materials"},
+    "tui.back": {"zh": "返回", "en": "Back"},
+    "tui.quit": {"zh": "離開", "en": "Quit"},
+    "tui.enter_number": {"zh": "請輸入編號", "en": "Enter number"},
+    "tui.invalid": {"zh": "無效的輸入", "en": "Invalid input"},
+    "tui.no_grades": {"zh": "無法取得成績資料", "en": "Cannot retrieve grade data"},
+    "tui.grade_item": {"zh": "項目", "en": "Item"},
+    "tui.grade_value": {"zh": "成績", "en": "Grade"},
+    "tui.grade_range": {"zh": "範圍", "en": "Range"},
+    "tui.grade_pct": {"zh": "百分比", "en": "Percentage"},
+    "tui.file_section": {"zh": "章節", "en": "Section"},
+    "tui.file_name": {"zh": "檔名", "en": "Filename"},
+    "tui.file_size": {"zh": "大小", "en": "Size"},
+    "tui.select_download": {"zh": "輸入編號下載，a 全部下載，q 返回", "en": "Enter number to download, a for all, q to go back"},
+    "tui.downloaded": {"zh": "✓ 已下載: {f}", "en": "✓ Downloaded: {f}"},
+    "tui.submit_select": {"zh": "選擇要提交的作業", "en": "Select assignment to submit"},
+    "tui.submit_file_prompt": {"zh": "輸入要上傳的檔案路徑", "en": "Enter file path to upload"},
+    "tui.new_assign_alert": {"zh": "🔔 有 {n} 個新作業！", "en": "🔔 {n} new assignment(s)!"},
+    "tui.sync_courses": {"zh": "同步課程", "en": "Sync courses"},
+    "tui.select_sync": {"zh": "選擇要同步的課程", "en": "Select courses to sync"},
+
+    # === Download updated ===
+    "dl.current_only": {
+        "zh": "預設只下載當期課程。使用 --all 下載所有學期。",
+        "en": "Downloading current semester only. Use --all for all semesters.",
+    },
+    "dl.select_prompt": {"zh": "選擇要下載的課程（輸入編號，逗號分隔）", "en": "Select courses to download (enter numbers, comma-separated)"},
+
+    # === Sync updated ===
+    "sync.current_only": {
+        "zh": "預設只同步當期課程。使用 --all 同步所有學期。",
+        "en": "Syncing current semester only. Use --all for all semesters.",
+    },
+    "sync.select_prompt": {"zh": "選擇要同步的課程（輸入編號，逗號分隔）", "en": "Select courses to sync (enter numbers, comma-separated)"},
+
+    # === CLI new ===
+    "cli.interactive": {"zh": "互動式介面", "en": "Interactive mode"},
 }
 
 

@@ -11,17 +11,10 @@ def get_enrolled_courses(client: MoodleClient, userid: int) -> list[dict]:
 
 
 def get_course_contents(client: MoodleClient, courseid: int) -> list[dict]:
-    """
-    取得課程內容（章節 → 模組 → 檔案）。
-
-    回傳結構：
-    [
-      {
-        "id": section_id, "name": "第一週", "modules": [
-          {"id": mod_id, "modname": "resource", "name": "...",
-           "contents": [{"filename": "...", "fileurl": "...", "filesize": ..., "timemodified": ...}]}
-        ]
-      }
-    ]
-    """
+    """取得課程內容（章節 → 模組 → 檔案）。"""
     return client.call("core_course_get_contents", courseid=courseid)
+
+
+def get_grades(client: MoodleClient, courseid: int, userid: int) -> dict:
+    """取得課程成績。"""
+    return client.call("gradereport_user_get_grade_items", courseid=courseid, userid=userid)

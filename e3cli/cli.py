@@ -10,6 +10,7 @@ from e3cli import __version__
 from e3cli.commands.assignments import app as assignments_app
 from e3cli.commands.courses import app as courses_app
 from e3cli.commands.download import app as download_app
+from e3cli.commands.interactive import app as interactive_app
 from e3cli.commands.login import app as login_app
 from e3cli.commands.logout import app as logout_app
 from e3cli.commands.schedule import app as schedule_app
@@ -25,6 +26,7 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 
+app.add_typer(interactive_app, name="i", help=t("cli.interactive"))
 app.add_typer(login_app, name="login", help=t("cli.login"))
 app.add_typer(logout_app, name="logout", help=t("cli.logout"))
 app.add_typer(courses_app, name="courses", help=t("cli.courses"))
