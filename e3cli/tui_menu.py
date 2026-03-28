@@ -42,8 +42,9 @@ class MenuItem:
 
 class MenuResult:
     """選單結果。"""
+
     def __init__(self, action: str, index: int = -1, key: str = "", cursor: int = 0):
-        self.action = action   # "select", "back", "quit", "search"
+        self.action = action  # "select", "back", "quit", "search"
         self.index = index
         self.key = key
         self.cursor = cursor  # 最後的 cursor 位置，供下次恢復
@@ -112,10 +113,13 @@ def show_menu(
         # 計算過濾後的項目
         if search_mode and search_text:
             query = search_text.lower()
-            visible = [(i, item) for i, item in enumerate(items)
-                       if query in _strip_rich_markup(item.label).lower()
-                       or query in _strip_rich_markup(item.description).lower()
-                       or item.disabled]  # 保留分組標題
+            visible = [
+                (i, item)
+                for i, item in enumerate(items)
+                if query in _strip_rich_markup(item.label).lower()
+                or query in _strip_rich_markup(item.description).lower()
+                or item.disabled
+            ]  # 保留分組標題
         else:
             visible = list(enumerate(items))
 
@@ -149,7 +153,9 @@ def show_menu(
                 real_idx = visible[cursor][0]
                 if not items[real_idx].disabled:
                     _clear_render()
-                    return MenuResult("select", real_idx, items[real_idx].key, cursor=cursor)
+                    return MenuResult(
+                        "select", real_idx, items[real_idx].key, cursor=cursor
+                    )
         elif key in ("left", "esc"):
             if search_mode:
                 search_mode = False
@@ -212,7 +218,9 @@ def _render_menu(
         pad = max(0, width - len(clean_title) - 4)
         left_pad = pad // 2
         right_pad = pad - left_pad
-        output.append(f"\033[36m{line_char * left_pad} {clean_title} {line_char * right_pad}\033[0m")
+        output.append(
+            f"\033[36m{line_char * left_pad} {clean_title} {line_char * right_pad}\033[0m"
+        )
     else:
         output.append(f"\033[36m{line_char * width}\033[0m")
 
@@ -231,11 +239,17 @@ def _render_menu(
         if item.disabled:
             output.append(f"\033[2m  {clean_label}\033[0m")
         elif is_selected:
-            desc_part = f"  \033[0m\033[2m{clean_desc}\033[0m" if clean_desc else ""
-            output.append(f"\033[7m\033[36m❯ {clean_label}\033[0m{desc_part}")
+            # 整行反白（label + description 都包在 \033[7m 內）
+            full = f"❯ {clean_label}"
+            if clean_desc:
+                full += f"  {clean_desc}"
+            # 用空白填滿到 width，讓反白整行
+            padded = full.ljust(width)
+            output.append(f"\033[7m\033[36m{padded}\033[0m")
         else:
-            desc_part = f"  \033[2m{clean_desc}\033[0m" if clean_desc else ""
-            output.append(f"  {clean_label}{desc_part}")
+            # description 用較亮的顏色（白色 dim 而非深灰）
+            desc_part = f"  \033[37m{clean_desc}\033[0m" if clean_desc else ""
+            output.append(f"  \033[1m{clean_label}\033[0m{desc_part}")
 
     output.append("")
 
@@ -243,7 +257,9 @@ def _render_menu(
     if search_mode:
         output.append(f"\033[33m/ {search_text}\033[0m\033[5m▊\033[0m")
     else:
-        output.append("\033[2m↑↓ navigate  →/Enter select  ← back  / search  q quit\033[0m")
+        output.append(
+            "\033[2m↑↓ navigate  →/Enter select  ← back  / search  q quit\033[0m"
+        )
 
     # 下分隔線
     output.append(f"\033[36m{line_char * width}\033[0m")
@@ -298,4 +314,6 @@ def show_menu_fullscreen(
     sys.stdout.flush()
     _last_render_lines = needed
 
-    return show_menu(items, title, subtitle, selected=selected, search_enabled=search_enabled)
+    return show_menu(
+        items, title, subtitle, selected=selected, search_enabled=search_enabled
+    )
