@@ -54,34 +54,43 @@ def _wait_enter():
 
 
 def _enter_shell():
-    """進入互動式 shell 模式。"""
+    """進入互動式 shell 模式，路徑提示不可刪除。"""
     console.print(f"\n[yellow]{t('tui.shell_mode')}[/yellow]")
     shell = os.environ.get("SHELL", "/bin/bash")
+
+    # 啟用 shell 模式的 tab 補全（用系統預設）
+    if "libedit" in (readline.__doc__ or ""):
+        readline.parse_and_bind("bind ^I rl_complete")
+    else:
+        readline.parse_and_bind("tab: complete")
+
     while True:
         try:
             cwd = os.getcwd()
-            cmd = console.input(f"[yellow bold]{cwd} $ [/yellow bold]").strip()
+            # 用 input() + ANSI prompt，路徑是 prompt 的一部分所以不可刪除
+            prompt = f"\033[33m{cwd}\033[0m \033[1m$\033[0m "
+            cmd = input(prompt).strip()
         except (EOFError, KeyboardInterrupt):
+            print()
             break
 
-        if cmd in ("exit", "quit"):
-            break
-        if cmd == "\x1b" or not cmd:  # Esc or empty
+        if cmd in ("exit", "quit", ""):
             break
 
-        try:
-            subprocess.run(cmd, shell=True, executable=shell, cwd=cwd)
-        except Exception as e:
-            console.print(f"[red]{e}[/red]")
-
-        # 支援 cd
-        if cmd.startswith("cd "):
-            target = cmd[3:].strip()
+        # 處理 cd
+        if cmd == "cd" or cmd.startswith("cd "):
+            target = cmd[3:].strip() if cmd.startswith("cd ") else os.path.expanduser("~")
             target = os.path.expanduser(target)
             try:
                 os.chdir(target)
             except OSError as e:
                 console.print(f"[red]{e}[/red]")
+            continue
+
+        try:
+            subprocess.run(cmd, shell=True, executable=shell)
+        except Exception as e:
+            console.print(f"[red]{e}[/red]")
 
     console.print(f"[dim]{t('tui.back')}[/dim]")
 
@@ -401,24 +410,61 @@ def _list_files_in_cwd(max_show: int = 10):
 
 
 def _setup_tab_completion():
-    """設定 readline tab 補全為檔案路徑。"""
+    """設定 readline tab 補全為檔案路徑，行為同 bash/zsh。"""
     def _completer(text, state):
-        # 展開 ~ 和環境變數
-        expanded = os.path.expanduser(text)
-        if os.path.isdir(expanded) and not expanded.endswith("/"):
-            expanded += "/"
-        matches = glob.glob(expanded + "*")
+        expanded = os.path.expanduser(text) if text else ""
+        # glob 匹配，加上隱藏檔支援
+        pattern = expanded + "*"
+        matches = glob.glob(pattern)
+        # 也嘗試加 .* 匹配隱藏檔（如果使用者輸入了 .）
+        if text.startswith("."):
+            matches += glob.glob(expanded + "*")
+
+        # 去重
+        matches = sorted(set(matches))
+
         # 目錄加 /
         matches = [m + "/" if os.path.isdir(m) else m for m in matches]
-        # 如果原始輸入有 ~，把展開的路徑還原
+
+        # 還原 ~ 前綴
         if text.startswith("~") and not expanded.startswith("~"):
             home = os.path.expanduser("~")
             matches = [m.replace(home, "~", 1) for m in matches]
+
         return matches[state] if state < len(matches) else None
 
+    # 保存舊設定
+    old_completer = readline.get_completer()
+    old_delims = readline.get_completer_delims()
+
     readline.set_completer(_completer)
-    readline.set_completer_delims(" \t\n")
-    readline.parse_and_bind("tab: complete")
+    readline.set_completer_delims(" \t\n;|&")
+    # macOS 用 libedit，語法不同
+    if "libedit" in (readline.__doc__ or ""):
+        readline.parse_and_bind("bind ^I rl_complete")
+    else:
+        readline.parse_and_bind("tab: complete")
+
+    return old_completer, old_delims
+
+
+def _restore_tab_completion(old_state):
+    """還原 readline 設定。"""
+    if old_state:
+        old_completer, old_delims = old_state
+        readline.set_completer(old_completer)
+        readline.set_completer_delims(old_delims)
+    else:
+        readline.set_completer(None)
+
+
+def _input_with_readline(prompt_text: str) -> str:
+    """用 Python 內建 input()（走 readline，支援 tab 補全）。"""
+    try:
+        return input(prompt_text).strip()
+    except (EOFError, KeyboardInterrupt):
+        print()
+        return "q"
 
 
 def _submit_interactive(client, db, assignment):
@@ -435,14 +481,15 @@ def _submit_interactive(client, db, assignment):
     console.print(f"[dim]{t('tui.submit_file_prompt')} (Tab {t('tui.back')}=q)[/dim]")
 
     # 啟用 tab 補全
-    _setup_tab_completion()
+    old_state = _setup_tab_completion()
 
     while True:
-        file_input = _prompt(t("tui.submit_file_prompt"))
+        # 用 input() 而非 console.input()，這樣 readline/tab 才有效
+        cwd = os.getcwd()
+        file_input = _input_with_readline(f"\033[36m{cwd}\033[0m \033[1mfile>\033[0m ")
 
         if file_input in ("q", "b", "back"):
-            # 還原 readline
-            readline.set_completer(None)
+            _restore_tab_completion(old_state)
             return
 
         if not file_input:
@@ -500,8 +547,7 @@ def _submit_interactive(client, db, assignment):
         else:
             console.print(f"[yellow]Status: {sub_status}[/yellow]")
 
-        # 還原 readline
-        readline.set_completer(None)
+        _restore_tab_completion(old_state)
         _wait_enter()
         return
 
