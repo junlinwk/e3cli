@@ -16,7 +16,12 @@ from rich.panel import Panel
 from rich.table import Table
 
 from e3cli import __version__
-from e3cli.api.assignments import get_assignments, get_submission_status, get_submission_status_text, save_submission
+from e3cli.api.assignments import (
+    get_assignments,
+    get_submission_status,
+    get_submission_status_text,
+    save_submission,
+)
 from e3cli.api.courses import get_course_contents, get_enrolled_courses, get_grades
 from e3cli.api.files import download_file
 from e3cli.api.site import get_site_info
@@ -42,7 +47,9 @@ def _sanitize(name: str) -> str:
 
 def _prompt(text: str = "") -> str:
     try:
-        result = console.input(f"[cyan bold]{'> ' if not text else text + ' > '}[/cyan bold]").strip()
+        result = console.input(
+            f"[cyan bold]{'> ' if not text else text + ' > '}[/cyan bold]"
+        ).strip()
         return result if result else ""
     except (EOFError, KeyboardInterrupt):
         return "q"
@@ -79,7 +86,9 @@ def _enter_shell():
 
         # 處理 cd
         if cmd == "cd" or cmd.startswith("cd "):
-            target = cmd[3:].strip() if cmd.startswith("cd ") else os.path.expanduser("~")
+            target = (
+                cmd[3:].strip() if cmd.startswith("cd ") else os.path.expanduser("~")
+            )
             target = os.path.expanduser(target)
             try:
                 os.chdir(target)
@@ -103,8 +112,8 @@ def _format_size(size: int) -> str:
     return f"{size / 1024 / 1024:.1f} MB"
 
 
-
 # ─── Main Menu ───────────────────────────────────────────────────────────
+
 
 def _main_menu(client, db, cfg, info, all_courses):
     current_courses = filter_current_semester(all_courses)
@@ -116,11 +125,13 @@ def _main_menu(client, db, cfg, info, all_courses):
 
     while True:
         console.print()
-        console.print(Panel(
-            f"[bold]{user}[/bold]  |  {sem}  |  {len(current_courses)} courses",
-            title=f"[bold cyan]e3cli v{__version__}[/bold cyan]",
-            border_style="cyan",
-        ))
+        console.print(
+            Panel(
+                f"[bold]{user}[/bold]  |  {sem}  |  {len(current_courses)} courses",
+                title=f"[bold cyan]e3cli v{__version__}[/bold cyan]",
+                border_style="cyan",
+            )
+        )
 
         items = [
             MenuItem(f"{t('tui.select_course')} ({sem})", key="current"),
@@ -130,7 +141,9 @@ def _main_menu(client, db, cfg, info, all_courses):
             MenuItem(t("tui.quit"), key="quit"),
         ]
 
-        result = show_menu_fullscreen(items, title=t("tui.main_menu"), subtitle="↑↓ ←→ Enter / q")
+        result = show_menu_fullscreen(
+            items, title=t("tui.main_menu"), subtitle="↑↓ ←→ Enter / q"
+        )
 
         if result.action == "quit" or result.key == "quit":
             break
@@ -148,6 +161,7 @@ def _main_menu(client, db, cfg, info, all_courses):
 
 # ─── Course List ─────────────────────────────────────────────────────────
 
+
 def _course_list_menu(client, db, cfg, info, courses, show_all=False):
     while True:
         items = []
@@ -157,26 +171,34 @@ def _course_list_menu(client, db, cfg, info, courses, show_all=False):
             groups = group_by_semester(courses)
             current = get_current_semester_code()
             for sem_code, sem_courses in groups.items():
-                sem_label = format_semester(sem_code) if sem_code != "other" else t("sem.other")
+                sem_label = (
+                    format_semester(sem_code) if sem_code != "other" else t("sem.other")
+                )
                 marker = " ★" if sem_code == current else ""
                 items.append(MenuItem(f"── {sem_label}{marker} ──", disabled=True))
                 for c in sem_courses:
-                    items.append(MenuItem(
-                        c.get("shortname", ""),
-                        key=str(c["id"]),
-                        description=c.get("fullname", ""),
-                    ))
+                    items.append(
+                        MenuItem(
+                            c.get("shortname", ""),
+                            key=str(c["id"]),
+                            description=c.get("fullname", ""),
+                        )
+                    )
                     flat_list.append(c)
         else:
             for c in courses:
-                items.append(MenuItem(
-                    c.get("shortname", ""),
-                    key=str(c["id"]),
-                    description=c.get("fullname", ""),
-                ))
+                items.append(
+                    MenuItem(
+                        c.get("shortname", ""),
+                        key=str(c["id"]),
+                        description=c.get("fullname", ""),
+                    )
+                )
                 flat_list.append(c)
 
-        result = show_menu_fullscreen(items, title=t("tui.select_course"), subtitle=t("tui.search_hint"))
+        result = show_menu_fullscreen(
+            items, title=t("tui.select_course"), subtitle=t("tui.search_hint")
+        )
 
         if result.action in ("back", "quit"):
             break
@@ -190,6 +212,7 @@ def _course_list_menu(client, db, cfg, info, courses, show_all=False):
 
 # ─── Course Detail ───────────────────────────────────────────────────────
 
+
 def _course_detail_menu(client, db, cfg, info, course):
     cid = course["id"]
     cname = course.get("shortname", "")
@@ -197,7 +220,9 @@ def _course_detail_menu(client, db, cfg, info, course):
 
     while True:
         console.print()
-        console.print(Panel(f"[bold]{cfull}[/bold]  [dim]({cname})[/dim]", border_style="green"))
+        console.print(
+            Panel(f"[bold]{cfull}[/bold]  [dim]({cname})[/dim]", border_style="green")
+        )
 
         items = [
             MenuItem(t("tui.materials"), key="materials"),
@@ -223,6 +248,7 @@ def _course_detail_menu(client, db, cfg, info, course):
 
 # ─── Materials View ──────────────────────────────────────────────────────
 
+
 def _materials_view(client, db, cfg, cid, cname):
     contents = get_course_contents(client, cid)
     download_dir = cfg.storage.download_dir
@@ -246,11 +272,13 @@ def _materials_view(client, db, cfg, cid, cname):
                     has_files = True
                 downloaded = db.is_downloaded(cid, mid, fname, ftime)
                 prefix = "✓ " if downloaded else "  "
-                items.append(MenuItem(
-                    f"{prefix}{fname}",
-                    key=str(len(all_files)),
-                    description=_format_size(fsize),
-                ))
+                items.append(
+                    MenuItem(
+                        f"{prefix}{fname}",
+                        key=str(len(all_files)),
+                        description=_format_size(fsize),
+                    )
+                )
                 all_files.append((cid, mid, fname, furl, fsize, ftime, section_name))
 
     if not all_files:
@@ -270,7 +298,9 @@ def _materials_view(client, db, cfg, cid, cname):
             if not db.is_downloaded(cid, mid, fname, ftime):
                 dest = download_dir / _sanitize(cname) / _sanitize(section_name) / fname
                 download_file(client, furl, dest)
-                db.record_download(cid, mid, fname, furl, fsize, ftime, str(dest), int(time.time()))
+                db.record_download(
+                    cid, mid, fname, furl, fsize, ftime, str(dest), int(time.time())
+                )
                 console.print(f"  {t('tui.downloaded', f=fname)}")
         _wait_enter()
     elif result.action == "select":
@@ -279,14 +309,19 @@ def _materials_view(client, db, cfg, cid, cname):
             cid, mid, fname, furl, fsize, ftime, section_name = all_files[idx]
             dest = download_dir / _sanitize(cname) / _sanitize(section_name) / fname
             download_file(client, furl, dest)
-            db.record_download(cid, mid, fname, furl, fsize, ftime, str(dest), int(time.time()))
+            db.record_download(
+                cid, mid, fname, furl, fsize, ftime, str(dest), int(time.time())
+            )
             console.print(f"  {t('tui.downloaded', f=fname)}")
             _wait_enter()
 
 
 # ─── Assignments View ────────────────────────────────────────────────────
 
-def _show_assignments_table(assign_list: list[tuple], title: str, show_course: bool = False):
+
+def _show_assignments_table(
+    assign_list: list[tuple], title: str, show_course: bool = False
+):
     """用 rich Table 顯示作業列表。assign_list: [(a, status, cname?), ...]"""
     table = Table(title=title, show_lines=True)
     table.add_column("#", style="cyan", width=4)
@@ -381,6 +416,7 @@ def _all_assignments_view(client, db, info, courses):
 
 # ─── Submit Interactive ──────────────────────────────────────────────────
 
+
 def _list_files_in_cwd(max_show: int = 10):
     """列出當前目錄的檔案。"""
     cwd = Path.cwd()
@@ -411,6 +447,7 @@ def _list_files_in_cwd(max_show: int = 10):
 
 def _setup_tab_completion():
     """設定 readline tab 補全為檔案路徑，行為同 bash/zsh。"""
+
     def _completer(text, state):
         expanded = os.path.expanduser(text) if text else ""
         # glob 匹配，加上隱藏檔支援
@@ -520,10 +557,13 @@ def _submit_interactive(client, db, assignment):
 
         # 確認提交
         console.print()
-        confirm = typer.confirm(t("tui.confirm_submit", f=file_path.name, a=aname), default=True)
+        confirm = typer.confirm(
+            t("tui.confirm_submit", f=file_path.name, a=aname), default=True
+        )
         if not confirm:
             console.print(f"[dim]{t('tui.submit_cancelled')}[/dim]")
-            continue
+            _restore_tab_completion(old_state)
+            return
 
         # 上傳
         console.print(f"[dim]{t('submit.uploading', n=1)}[/dim]")
@@ -537,7 +577,9 @@ def _submit_interactive(client, db, assignment):
 
         # 驗證
         verify = get_submission_status(client, aid)
-        sub_status = verify.get("lastattempt", {}).get("submission", {}).get("status", "unknown")
+        sub_status = (
+            verify.get("lastattempt", {}).get("submission", {}).get("status", "unknown")
+        )
 
         if sub_status == "submitted":
             console.print(f"[green]{t('submit.ok')}[/green]")
@@ -554,6 +596,7 @@ def _submit_interactive(client, db, assignment):
 
 # ─── Grades View ─────────────────────────────────────────────────────────
 
+
 def _grades_view(client, info, cid):
     try:
         data = get_grades(client, cid, info["userid"])
@@ -562,7 +605,11 @@ def _grades_view(client, info, cid):
         _wait_enter()
         return
 
-    grade_items = data.get("usergrades", [{}])[0].get("gradeitems", []) if data.get("usergrades") else []
+    grade_items = (
+        data.get("usergrades", [{}])[0].get("gradeitems", [])
+        if data.get("usergrades")
+        else []
+    )
 
     if not grade_items:
         console.print(f"[yellow]{t('tui.no_grades')}[/yellow]")
@@ -589,6 +636,7 @@ def _grades_view(client, info, cid):
 
 # ─── Download All for Course ─────────────────────────────────────────────
 
+
 def _download_course_all(client, db, cfg, cid, cname):
     download_dir = cfg.storage.download_dir
     contents = get_course_contents(client, cid)
@@ -609,7 +657,9 @@ def _download_course_all(client, db, cfg, cid, cname):
                     continue
                 dest = download_dir / _sanitize(cname) / section_name / fname
                 download_file(client, furl, dest)
-                db.record_download(cid, mid, fname, furl, fsize, ftime, str(dest), int(time.time()))
+                db.record_download(
+                    cid, mid, fname, furl, fsize, ftime, str(dest), int(time.time())
+                )
                 console.print(f"  {t('tui.downloaded', f=fname)}")
                 count += 1
 
@@ -622,17 +672,23 @@ def _download_course_all(client, db, cfg, cid, cname):
 
 # ─── Sync Menu ───────────────────────────────────────────────────────────
 
+
 def _sync_menu(client, db, cfg, info, all_courses):
     current_courses = filter_current_semester(all_courses)
     if not current_courses:
         current_courses = all_courses
 
     items = [
-        MenuItem(t("sem.current", sem=format_semester(get_current_semester_code())), key="current"),
+        MenuItem(
+            t("sem.current", sem=format_semester(get_current_semester_code())),
+            key="current",
+        ),
         MenuItem(t("sem.all_semesters"), key="all"),
     ]
 
-    result = show_menu_fullscreen(items, title=t("tui.sync_courses"), search_enabled=False)
+    result = show_menu_fullscreen(
+        items, title=t("tui.sync_courses"), search_enabled=False
+    )
 
     if result.action in ("back", "quit"):
         return
@@ -674,14 +730,22 @@ def _do_sync_courses(client, db, cfg, courses):
                     furl = file_info.get("fileurl", "")
                     fsize = file_info.get("filesize", 0)
                     ftime = file_info.get("timemodified", 0)
-                    if not fname or not furl or db.is_downloaded(cid, mid, fname, ftime):
+                    if (
+                        not fname
+                        or not furl
+                        or db.is_downloaded(cid, mid, fname, ftime)
+                    ):
                         continue
                     dest = download_dir / cname / section_name / fname
                     try:
                         download_file(client, furl, dest)
-                        db.record_download(cid, mid, fname, furl, fsize, ftime, str(dest), now)
+                        db.record_download(
+                            cid, mid, fname, furl, fsize, ftime, str(dest), now
+                        )
                         new_files += 1
-                        console.print(f"  [green]↓[/green] {cname}/{section_name}/{fname}")
+                        console.print(
+                            f"  [green]↓[/green] {cname}/{section_name}/{fname}"
+                        )
                     except Exception as e:
                         console.print(f"  [red]✗[/red] {fname}: {e}")
 
@@ -692,18 +756,25 @@ def _do_sync_courses(client, db, cfg, courses):
                 cid = course_data["id"]
                 cname = course_names.get(cid, "")
                 for a in course_data.get("assignments", []):
-                    is_new = db.upsert_assignment(a["id"], cid, cname, a["name"], a.get("duedate", 0), now)
+                    is_new = db.upsert_assignment(
+                        a["id"], cid, cname, a["name"], a.get("duedate", 0), now
+                    )
                     if is_new:
                         new_assignments += 1
-                        console.print(f"  [yellow]{t('sync.new_assign', course=cname, name=a['name'])}[/yellow]")
+                        console.print(
+                            f"  [yellow]{t('sync.new_assign', course=cname, name=a['name'])}[/yellow]"
+                        )
         except Exception:
             pass
 
-    console.print(f"\n[green]{t('sync.done', files=new_files, assigns=new_assignments)}[/green]")
+    console.print(
+        f"\n[green]{t('sync.done', files=new_files, assigns=new_assignments)}[/green]"
+    )
     _wait_enter()
 
 
 # ─── Entry Point ─────────────────────────────────────────────────────────
+
 
 @app.callback(invoke_without_command=True)
 def interactive():
