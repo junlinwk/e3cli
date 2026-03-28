@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "e3cli"
-version = "0.3.2"
+version = "0.4.0"
 description = "NYCU E3 Moodle automation CLI — sync courses, download materials, submit assignments."
 readme = "README.md"
 license = "MIT"
