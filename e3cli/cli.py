@@ -7,12 +7,15 @@ import sys
 import typer
 
 from e3cli import __version__
+from e3cli.commands.announcements import app as announcements_cli_app
 from e3cli.commands.assignments import app as assignments_app
 from e3cli.commands.courses import app as courses_app
 from e3cli.commands.download import app as download_app
 from e3cli.commands.interactive import app as interactive_app
 from e3cli.commands.login import app as login_app
 from e3cli.commands.logout import app as logout_app
+from e3cli.commands.members import app as members_app
+from e3cli.commands.message import app as message_app
 from e3cli.commands.schedule import app as schedule_app
 from e3cli.commands.setup import app as setup_app
 from e3cli.commands.setup import is_first_run, run_setup_wizard
@@ -36,6 +39,9 @@ app.add_typer(submit_app, name="submit", help=t("cli.submit"))
 app.add_typer(sync_app, name="sync", help=t("cli.sync"))
 app.add_typer(schedule_app, name="schedule", help=t("cli.schedule"))
 app.add_typer(setup_app, name="setup", help=t("cli.setup"))
+app.add_typer(members_app, name="members", help=t("cli.members"))
+app.add_typer(message_app, name="message", help=t("cli.message"))
+app.add_typer(announcements_cli_app, name="announcements", help=t("cli.announcements"))
 
 
 @app.command()

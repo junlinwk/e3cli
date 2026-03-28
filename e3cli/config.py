@@ -7,11 +7,11 @@ import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 
-CONFIG_DIR = Path.home() / ".e3cli"
+CONFIG_DIR = Path(os.environ.get("E3CLI_CONFIG_DIR", str(Path.home() / ".e3cli")))
 CONFIG_FILE = CONFIG_DIR / "config.toml"
 TOKEN_FILE = CONFIG_DIR / "token"
 DB_PATH = CONFIG_DIR / "data" / "e3cli.db"
-DEFAULT_DOWNLOAD_DIR = Path.home() / "e3-downloads"
+DEFAULT_DOWNLOAD_DIR = Path(os.environ.get("E3CLI_DOWNLOAD_DIR", str(Path.home() / "e3-downloads")))
 
 
 @dataclass
