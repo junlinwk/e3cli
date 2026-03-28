@@ -16,7 +16,12 @@ from e3cli.api.site import get_site_info
 from e3cli.commands._common import get_client, get_db
 from e3cli.config import load_config
 from e3cli.i18n import t
-from e3cli.semester import filter_current_semester, format_semester, fuzzy_match_course, get_current_semester_code
+from e3cli.semester import (
+    filter_current_semester,
+    format_semester,
+    fuzzy_match_course,
+    get_current_semester_code,
+)
 
 console = Console()
 app = typer.Typer()
@@ -56,8 +61,12 @@ def _interactive_select(course_list: list[dict]) -> list[dict]:
 def sync(
     quiet: bool = typer.Option(False, "--quiet", "-q", help=t("sync.opt_quiet")),
     all_courses: bool = typer.Option(False, "--all", "-a", help="Sync all semesters"),
-    course: str = typer.Option(None, "--course", "-c", help="Sync specific course (fuzzy match)"),
-    select: bool = typer.Option(False, "--select", "-s", help="Interactive course selection"),
+    course: str = typer.Option(
+        None, "--course", "-c", help="Sync specific course (fuzzy match)"
+    ),
+    select: bool = typer.Option(
+        False, "--select", "-s", help="Interactive course selection"
+    ),
 ):
     """Sync course materials and assignments (current semester by default)."""
     client = get_client()
@@ -127,10 +136,14 @@ def sync(
                     dest = download_dir / cname / section_name / fname
                     try:
                         download_file(client, furl, dest)
-                        db.record_download(cid, mid, fname, furl, fsize, ftime, str(dest), now)
+                        db.record_download(
+                            cid, mid, fname, furl, fsize, ftime, str(dest), now
+                        )
                         new_files += 1
                         if not quiet:
-                            console.print(f"  [green]↓[/green] {cname}/{section_name}/{fname}")
+                            console.print(
+                                f"  [green]↓[/green] {cname}/{section_name}/{fname}"
+                            )
                     except Exception as e:
                         if not quiet:
                             console.print(f"  [red]✗[/red] {fname}: {e}")
@@ -147,7 +160,12 @@ def sync(
                 cname = course_names.get(cid, "")
                 for a in course_data.get("assignments", []):
                     is_new = db.upsert_assignment(
-                        a["id"], cid, cname, a["name"], a.get("duedate", 0), now,
+                        a["id"],
+                        cid,
+                        cname,
+                        a["name"],
+                        a.get("duedate", 0),
+                        now,
                     )
                     if is_new:
                         new_assignments += 1
@@ -160,6 +178,10 @@ def sync(
                 console.print(f"[red]{t('sync.assign_fail', e=e)}[/red]")
 
     if not quiet:
-        console.print(f"\n[green]{t('sync.done', files=new_files, assigns=new_assignments)}[/green]")
+        console.print(
+            f"\n[green]{t('sync.done', files=new_files, assigns=new_assignments)}[/green]"
+        )
+        if new_files > 0:
+            console.print(f"[dim]{t('dl.saved_to', path=str(download_dir))}[/dim]")
 
     db.close()

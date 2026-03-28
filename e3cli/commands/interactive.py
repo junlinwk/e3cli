@@ -294,6 +294,7 @@ def _materials_view(client, db, cfg, cid, cname):
     if result.action in ("back", "quit"):
         return
     elif result.key == "all":
+        count = 0
         for cid, mid, fname, furl, fsize, ftime, section_name in all_files:
             if not db.is_downloaded(cid, mid, fname, ftime):
                 dest = download_dir / _sanitize(cname) / _sanitize(section_name) / fname
@@ -302,6 +303,11 @@ def _materials_view(client, db, cfg, cid, cname):
                     cid, mid, fname, furl, fsize, ftime, str(dest), int(time.time())
                 )
                 console.print(f"  {t('tui.downloaded', f=fname)}")
+                count += 1
+        if count > 0:
+            console.print(
+                f"[dim]{t('dl.saved_to', path=str(download_dir / _sanitize(cname)))}[/dim]"
+            )
         _wait_enter()
     elif result.action == "select":
         idx = int(result.key)
@@ -313,6 +319,7 @@ def _materials_view(client, db, cfg, cid, cname):
                 cid, mid, fname, furl, fsize, ftime, str(dest), int(time.time())
             )
             console.print(f"  {t('tui.downloaded', f=fname)}")
+            console.print(f"[dim]{t('dl.saved_to', path=str(dest))}[/dim]")
             _wait_enter()
 
 
@@ -667,6 +674,9 @@ def _download_course_all(client, db, cfg, cid, cname):
         console.print(f"  [dim]{t('dl.no_new')}[/dim]")
     else:
         console.print(f"\n[green]{t('dl.done', new=count, skip=0)}[/green]")
+        console.print(
+            f"[dim]{t('dl.saved_to', path=str(download_dir / _sanitize(cname)))}[/dim]"
+        )
     _wait_enter()
 
 

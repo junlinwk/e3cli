@@ -16,7 +16,12 @@ from e3cli.api.site import get_site_info
 from e3cli.commands._common import get_client, get_db
 from e3cli.config import load_config
 from e3cli.i18n import t
-from e3cli.semester import filter_current_semester, fuzzy_match_course, get_current_semester_code, format_semester
+from e3cli.semester import (
+    filter_current_semester,
+    fuzzy_match_course,
+    get_current_semester_code,
+    format_semester,
+)
 
 console = Console()
 app = typer.Typer()
@@ -84,28 +89,38 @@ def _do_download(client, db, course_list: list[dict], download_dir):
                         continue
 
                     dest = download_dir / cname / section_name / fname
-                    files_to_download.append((cid, mid, fname, furl, fsize, ftime, dest))
+                    files_to_download.append(
+                        (cid, mid, fname, furl, fsize, ftime, dest)
+                    )
 
         if not files_to_download:
             console.print(f"  [dim]{t('dl.no_new')}[/dim]")
             continue
 
         with Progress(console=console) as progress:
-            task = progress.add_task(f"  {t('dl.progress')}", total=len(files_to_download))
+            task = progress.add_task(
+                f"  {t('dl.progress')}", total=len(files_to_download)
+            )
             for cid, mid, fname, furl, fsize, ftime, dest in files_to_download:
                 download_file(client, furl, dest)
-                db.record_download(cid, mid, fname, furl, fsize, ftime, str(dest), int(time.time()))
+                db.record_download(
+                    cid, mid, fname, furl, fsize, ftime, str(dest), int(time.time())
+                )
                 total_new += 1
                 progress.advance(task)
 
     console.print(f"\n[green]{t('dl.done', new=total_new, skip=total_skipped)}[/green]")
+    if total_new > 0:
+        console.print(f"[dim]{t('dl.saved_to', path=str(download_dir))}[/dim]")
 
 
 @app.callback(invoke_without_command=True)
 def download(
     course: str = typer.Option(None, "--course", "-c", help=t("dl.opt_course")),
     all_courses: bool = typer.Option(False, "--all", "-a", help=t("dl.opt_all")),
-    select: bool = typer.Option(False, "--select", "-s", help="Interactive course selection"),
+    select: bool = typer.Option(
+        False, "--select", "-s", help="Interactive course selection"
+    ),
 ):
     """Download course materials (current semester by default)."""
     client = get_client()
