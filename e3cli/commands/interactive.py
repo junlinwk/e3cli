@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import glob
+import os
 import re
+import readline
+import subprocess
 import time
 from pathlib import Path
 
@@ -38,9 +42,48 @@ def _sanitize(name: str) -> str:
 
 def _prompt(text: str = "") -> str:
     try:
-        return console.input(f"[cyan bold]{'> ' if not text else text + ' > '}[/cyan bold]").strip()
+        result = console.input(f"[cyan bold]{'> ' if not text else text + ' > '}[/cyan bold]").strip()
+        return result if result else ""
     except (EOFError, KeyboardInterrupt):
         return "q"
+
+
+def _wait_enter():
+    """按 Enter 繼續。"""
+    _prompt(t("tui.press_enter"))
+
+
+def _enter_shell():
+    """進入互動式 shell 模式。"""
+    console.print(f"\n[yellow]{t('tui.shell_mode')}[/yellow]")
+    shell = os.environ.get("SHELL", "/bin/bash")
+    while True:
+        try:
+            cwd = os.getcwd()
+            cmd = console.input(f"[yellow bold]{cwd} $ [/yellow bold]").strip()
+        except (EOFError, KeyboardInterrupt):
+            break
+
+        if cmd in ("exit", "quit"):
+            break
+        if cmd == "\x1b" or not cmd:  # Esc or empty
+            break
+
+        try:
+            subprocess.run(cmd, shell=True, executable=shell, cwd=cwd)
+        except Exception as e:
+            console.print(f"[red]{e}[/red]")
+
+        # 支援 cd
+        if cmd.startswith("cd "):
+            target = cmd[3:].strip()
+            target = os.path.expanduser(target)
+            try:
+                os.chdir(target)
+            except OSError as e:
+                console.print(f"[red]{e}[/red]")
+
+    console.print(f"[dim]{t('tui.back')}[/dim]")
 
 
 def _format_size(size: int) -> str:
@@ -203,7 +246,7 @@ def _materials_view(client, db, cfg, cid, cname):
 
     if not all_files:
         console.print(f"  [dim]{t('dl.no_new')}[/dim]")
-        _prompt(t("tui.back"))
+        _wait_enter()
         return
 
     # 加入「全部下載」選項
@@ -220,7 +263,7 @@ def _materials_view(client, db, cfg, cid, cname):
                 download_file(client, furl, dest)
                 db.record_download(cid, mid, fname, furl, fsize, ftime, str(dest), int(time.time()))
                 console.print(f"  {t('tui.downloaded', f=fname)}")
-        _prompt(t("tui.back"))
+        _wait_enter()
     elif result.action == "select":
         idx = int(result.key)
         if 0 <= idx < len(all_files):
@@ -229,7 +272,7 @@ def _materials_view(client, db, cfg, cid, cname):
             download_file(client, furl, dest)
             db.record_download(cid, mid, fname, furl, fsize, ftime, str(dest), int(time.time()))
             console.print(f"  {t('tui.downloaded', f=fname)}")
-            _prompt(t("tui.back"))
+            _wait_enter()
 
 
 # ─── Assignments View ────────────────────────────────────────────────────
@@ -272,7 +315,7 @@ def _assignments_view(client, db, info, cid, cname):
 
     if not sorted_raw:
         console.print(f"  [green]{t('assign.empty')}[/green]")
-        _prompt(t("tui.back"))
+        _wait_enter()
         return
 
     _show_assignments_table(sorted_raw, f"{t('tui.assignments')} — {cname}")
@@ -311,7 +354,7 @@ def _all_assignments_view(client, db, info, courses):
 
     if not sorted_raw:
         console.print(f"  [green]{t('assign.empty')}[/green]")
-        _prompt(t("tui.back"))
+        _wait_enter()
         return
 
     _show_assignments_table(sorted_raw, t("tui.assignments"), show_course=True)
@@ -329,40 +372,138 @@ def _all_assignments_view(client, db, info, courses):
 
 # ─── Submit Interactive ──────────────────────────────────────────────────
 
+def _list_files_in_cwd(max_show: int = 10):
+    """列出當前目錄的檔案。"""
+    cwd = Path.cwd()
+    console.print(f"\n[dim]{t('tui.cwd', path=str(cwd))}[/dim]")
+    console.print(f"[dim]{t('tui.files_in_dir')}[/dim]")
+
+    entries = sorted(cwd.iterdir())
+    files = [e for e in entries if e.is_file()]
+    dirs = [e for e in entries if e.is_dir() and not e.name.startswith(".")]
+
+    # 先顯示目錄
+    for d in dirs[:5]:
+        console.print(f"  [cyan]{d.name}/[/cyan]")
+
+    # 再顯示檔案
+    shown = 0
+    for f in files:
+        if shown >= max_show:
+            remaining = len(files) - max_show
+            console.print(f"  [dim]{t('tui.more_files', n=remaining)}[/dim]")
+            break
+        console.print(f"  {f.name}")
+        shown += 1
+
+    if not files and not dirs:
+        console.print("  [dim](empty)[/dim]")
+
+
+def _setup_tab_completion():
+    """設定 readline tab 補全為檔案路徑。"""
+    def _completer(text, state):
+        # 展開 ~ 和環境變數
+        expanded = os.path.expanduser(text)
+        if os.path.isdir(expanded) and not expanded.endswith("/"):
+            expanded += "/"
+        matches = glob.glob(expanded + "*")
+        # 目錄加 /
+        matches = [m + "/" if os.path.isdir(m) else m for m in matches]
+        # 如果原始輸入有 ~，把展開的路徑還原
+        if text.startswith("~") and not expanded.startswith("~"):
+            home = os.path.expanduser("~")
+            matches = [m.replace(home, "~", 1) for m in matches]
+        return matches[state] if state < len(matches) else None
+
+    readline.set_completer(_completer)
+    readline.set_completer_delims(" \t\n")
+    readline.parse_and_bind("tab: complete")
+
+
 def _submit_interactive(client, db, assignment):
+    """互動式提交作業 — 顯示檔案列表、支援 tab 補全、! 進入 shell。"""
     aid = assignment["id"]
     aname = assignment["name"]
 
     console.print(f"\n[bold]{aname}[/bold] (ID: {aid})")
-    file_path_str = _prompt(t("tui.submit_file_prompt"))
-    if file_path_str in ("q", "b", "back", ""):
+
+    # 列出當前目錄檔案
+    _list_files_in_cwd()
+
+    console.print(f"\n[dim]{t('tui.shell_hint')}[/dim]")
+    console.print(f"[dim]{t('tui.submit_file_prompt')} (Tab {t('tui.back')}=q)[/dim]")
+
+    # 啟用 tab 補全
+    _setup_tab_completion()
+
+    while True:
+        file_input = _prompt(t("tui.submit_file_prompt"))
+
+        if file_input in ("q", "b", "back"):
+            # 還原 readline
+            readline.set_completer(None)
+            return
+
+        if not file_input:
+            # Enter 空白不做事（不返回）
+            continue
+
+        if file_input == "!":
+            # 進入 shell 模式
+            _enter_shell()
+            _list_files_in_cwd()
+            continue
+
+        if file_input.startswith("!"):
+            # 單次 shell 指令
+            cmd = file_input[1:]
+            shell = os.environ.get("SHELL", "/bin/bash")
+            try:
+                subprocess.run(cmd, shell=True, executable=shell)
+            except Exception as e:
+                console.print(f"[red]{e}[/red]")
+            continue
+
+        # 解析檔案路徑
+        file_path = Path(file_input).expanduser().resolve()
+        if not file_path.exists():
+            console.print(f"[red]{t('submit.not_found', f=file_input)}[/red]")
+            continue
+
+        # 確認提交
+        console.print()
+        confirm = typer.confirm(t("tui.confirm_submit", f=file_path.name, a=aname), default=True)
+        if not confirm:
+            console.print(f"[dim]{t('tui.submit_cancelled')}[/dim]")
+            continue
+
+        # 上傳
+        console.print(f"[dim]{t('submit.uploading', n=1)}[/dim]")
+        result = client.upload_file(file_path)
+        itemid = result[0].get("itemid", 0) if result else 0
+        console.print(f"  ✓ {file_path.name}")
+
+        # 提交
+        console.print(f"[dim]{t('submit.submitting')}[/dim]")
+        save_submission(client, aid, itemid)
+
+        # 驗證
+        verify = get_submission_status(client, aid)
+        sub_status = verify.get("lastattempt", {}).get("submission", {}).get("status", "unknown")
+
+        if sub_status == "submitted":
+            console.print(f"[green]{t('submit.ok')}[/green]")
+            db.update_assignment_status(aid, "submitted")
+        elif sub_status == "draft":
+            console.print(f"[yellow]{t('submit.draft')}[/yellow]")
+        else:
+            console.print(f"[yellow]Status: {sub_status}[/yellow]")
+
+        # 還原 readline
+        readline.set_completer(None)
+        _wait_enter()
         return
-
-    file_path = Path(file_path_str).expanduser()
-    if not file_path.exists():
-        console.print(f"[red]{t('submit.not_found', f=file_path)}[/red]")
-        return
-
-    console.print(f"[dim]{t('submit.uploading', n=1)}[/dim]")
-    result = client.upload_file(file_path)
-    itemid = result[0].get("itemid", 0) if result else 0
-    console.print(f"  ✓ {file_path.name}")
-
-    console.print(f"[dim]{t('submit.submitting')}[/dim]")
-    save_submission(client, aid, itemid)
-
-    verify = get_submission_status(client, aid)
-    sub_status = verify.get("lastattempt", {}).get("submission", {}).get("status", "unknown")
-
-    if sub_status == "submitted":
-        console.print(f"[green]{t('submit.ok')}[/green]")
-        db.update_assignment_status(aid, "submitted")
-    elif sub_status == "draft":
-        console.print(f"[yellow]{t('submit.draft')}[/yellow]")
-    else:
-        console.print(f"[yellow]Status: {sub_status}[/yellow]")
-
-    _prompt(t("tui.back"))
 
 
 # ─── Grades View ─────────────────────────────────────────────────────────
@@ -372,14 +513,14 @@ def _grades_view(client, info, cid):
         data = get_grades(client, cid, info["userid"])
     except Exception:
         console.print(f"[yellow]{t('tui.no_grades')}[/yellow]")
-        _prompt(t("tui.back"))
+        _wait_enter()
         return
 
     grade_items = data.get("usergrades", [{}])[0].get("gradeitems", []) if data.get("usergrades") else []
 
     if not grade_items:
         console.print(f"[yellow]{t('tui.no_grades')}[/yellow]")
-        _prompt(t("tui.back"))
+        _wait_enter()
         return
 
     table = Table(title=t("tui.grades"))
@@ -397,7 +538,7 @@ def _grades_view(client, info, cid):
         table.add_row(name, str(grade), f"{grade_min}-{grade_max}", str(pct))
 
     console.print(table)
-    _prompt(t("tui.back"))
+    _wait_enter()
 
 
 # ─── Download All for Course ─────────────────────────────────────────────
@@ -430,7 +571,7 @@ def _download_course_all(client, db, cfg, cid, cname):
         console.print(f"  [dim]{t('dl.no_new')}[/dim]")
     else:
         console.print(f"\n[green]{t('dl.done', new=count, skip=0)}[/green]")
-    _prompt(t("tui.back"))
+    _wait_enter()
 
 
 # ─── Sync Menu ───────────────────────────────────────────────────────────
@@ -513,7 +654,7 @@ def _do_sync_courses(client, db, cfg, courses):
             pass
 
     console.print(f"\n[green]{t('sync.done', files=new_files, assigns=new_assignments)}[/green]")
-    _prompt(t("tui.back"))
+    _wait_enter()
 
 
 # ─── Entry Point ─────────────────────────────────────────────────────────
