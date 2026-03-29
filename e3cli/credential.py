@@ -5,6 +5,7 @@
   key               — 加密金鑰 (chmod 600)
   credentials.enc   — 加密帳密 (chmod 600)
   token             — Moodle API token (chmod 600)
+  profile.json      — Profile 設定（moodle_url, service）
 
 ~/.e3cli/active_profile — 記錄當前預設 profile 名稱
 
@@ -102,7 +103,7 @@ def set_active_profile(name: str) -> None:
 
 
 def list_profiles() -> list[dict]:
-    """列出所有 profiles，回傳 [{"name": str, "username": str, "active": bool}]。"""
+    """列出所有 profiles，回傳 [{"name", "username", "active", "moodle_url"}]。"""
     ensure_dirs()
     _migrate_legacy()
     active = get_active_profile()
@@ -112,12 +113,45 @@ def list_profiles() -> list[dict]:
             if d.is_dir() and (d / "credentials.enc").exists():
                 creds = load_credentials(d.name)
                 username = creds[0] if creds else "?"
+                meta = load_profile_meta(d.name)
                 profiles.append({
                     "name": d.name,
                     "username": username,
                     "active": d.name == active,
+                    "moodle_url": meta.get("moodle_url", ""),
                 })
     return profiles
+
+
+# ─── Profile metadata ────────────────────────────────────────────────────
+
+def save_profile_meta(profile: str, *, moodle_url: str = "", service: str = "moodle_mobile_app") -> None:
+    """儲存 profile 的 Moodle 平台設定。"""
+    meta_file = _profile_dir(profile) / "profile.json"
+    meta = {}
+    if meta_file.exists():
+        try:
+            meta = json.loads(meta_file.read_text())
+        except (json.JSONDecodeError, OSError):
+            pass
+    if moodle_url:
+        meta["moodle_url"] = moodle_url
+    if service:
+        meta["service"] = service
+    meta_file.write_text(json.dumps(meta, ensure_ascii=False))
+
+
+def load_profile_meta(profile: str | None = None) -> dict:
+    """讀取 profile 的 Moodle 平台設定。回傳 {"moodle_url": str, "service": str}。"""
+    if profile is None:
+        profile = get_active_profile()
+    meta_file = _profile_dir(profile) / "profile.json"
+    if meta_file.exists():
+        try:
+            return json.loads(meta_file.read_text())
+        except (json.JSONDecodeError, OSError):
+            pass
+    return {}
 
 
 # ─── Credential operations ───────────────────────────────────────────────
@@ -169,7 +203,7 @@ def save_token_for_profile(token: str, profile: str | None = None) -> None:
 
 
 def activate_profile(name: str) -> bool:
-    """切換到指定 profile，載入其 token。回傳是否成功。"""
+    """切換到指定 profile，載入其 token 和 Moodle URL。回傳是否成功。"""
     pdir = _profile_dir(name)
     if not (pdir / "credentials.enc").exists():
         return False
@@ -179,7 +213,42 @@ def activate_profile(name: str) -> bool:
     if token_file.exists():
         TOKEN_FILE.write_text(token_file.read_text())
         TOKEN_FILE.chmod(0o600)
+    # 套用此 profile 的 Moodle URL 到 config
+    meta = load_profile_meta(name)
+    if meta.get("moodle_url"):
+        _apply_profile_url(meta["moodle_url"], meta.get("service", "moodle_mobile_app"))
     return True
+
+
+def _apply_profile_url(url: str, service: str = "moodle_mobile_app") -> None:
+    """將 profile 的 Moodle URL 寫入 config.toml。"""
+    import tomllib
+    from e3cli.config import CONFIG_FILE
+    if not CONFIG_FILE.exists():
+        return
+    with open(CONFIG_FILE, "rb") as f:
+        data = tomllib.load(f)
+    data.setdefault("moodle", {})["url"] = url
+    data["moodle"]["service"] = service
+    _write_config_toml(data)
+
+
+def _write_config_toml(data: dict) -> None:
+    """將 dict 寫回 config.toml（保留結構）。"""
+    from e3cli.config import CONFIG_FILE
+    lines = []
+    for section, values in data.items():
+        if isinstance(values, dict):
+            lines.append(f"[{section}]")
+            for k, v in values.items():
+                if isinstance(v, bool):
+                    lines.append(f'{k} = {"true" if v else "false"}')
+                elif isinstance(v, int):
+                    lines.append(f"{k} = {v}")
+                else:
+                    lines.append(f'{k} = "{v}"')
+            lines.append("")
+    CONFIG_FILE.write_text("\n".join(lines) + "\n")
 
 
 def clear_credentials(profile: str | None = None) -> None:
@@ -191,6 +260,10 @@ def clear_credentials(profile: str | None = None) -> None:
         if path.exists():
             path.write_bytes(b"\x00" * max(path.stat().st_size, 1))
             path.unlink()
+    # 刪除 profile metadata
+    meta_file = pdir / "profile.json"
+    if meta_file.exists():
+        meta_file.unlink()
     # 如果刪的是 active profile，清主 token
     if profile == get_active_profile():
         if TOKEN_FILE.exists():
@@ -221,6 +294,13 @@ def _migrate_legacy() -> None:
             # 複製 token
             if TOKEN_FILE.exists():
                 shutil.copy2(TOKEN_FILE, dest / "token")
+            # 從現有 config 讀取 moodle_url 作為 default profile 的設定
+            try:
+                from e3cli.config import load_config
+                cfg = load_config()
+                save_profile_meta("default", moodle_url=cfg.moodle.url, service=cfg.moodle.service)
+            except Exception:
+                pass
             set_active_profile("default")
         # 清除舊檔
         _LEGACY_CRED.unlink()

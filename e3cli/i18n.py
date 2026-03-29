@@ -310,6 +310,8 @@ _STRINGS: dict[str, dict[str, str]] = {
     "profile.confirm_delete": {"zh": "確定要刪除帳號 {name}？此操作無法復原。", "en": "Delete profile {name}? This cannot be undone."},
     "profile.deleted": {"zh": "✓ 已刪除帳號 {name}", "en": "✓ Profile {name} deleted"},
     "profile.cannot_delete_active": {"zh": "無法刪除目前使用中的帳號，請先切換到其他帳號。", "en": "Cannot delete the active profile. Switch to another profile first."},
+    "profile.url_hint": {"zh": "輸入 Moodle 網址（不同學校可輸入不同網址），直接 Enter 使用預設", "en": "Enter Moodle URL (different schools use different URLs). Press Enter for default."},
+    "profile.col_url": {"zh": "Moodle 網址", "en": "Moodle URL"},
 
     # === Edit submission ===
     "edit.title": {"zh": "編輯提交", "en": "Edit Submission"},

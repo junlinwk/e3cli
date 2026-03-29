@@ -13,7 +13,9 @@ from e3cli.credential import (
     get_active_profile,
     has_credentials,
     load_credentials,
+    load_profile_meta,
     save_credentials,
+    save_profile_meta,
     save_token_for_profile,
 )
 from e3cli.i18n import t
@@ -28,10 +30,15 @@ def login(
     save_password: bool = typer.Option(False, "--save", "-s", help=t("login.opt_save")),
     refresh: bool = typer.Option(False, "--refresh", "-r", help=t("login.opt_refresh")),
     profile: str = typer.Option(None, "--profile", "-p", help="Profile name (default: active profile)"),
+    url: str = typer.Option(None, "--url", help="Moodle URL (overrides config and profile)"),
 ):
     """Login to Moodle and save token."""
     cfg = load_config()
     active = profile or get_active_profile()
+
+    # 決定 Moodle URL：--url > profile metadata > config
+    meta = load_profile_meta(active)
+    moodle_url = url or meta.get("moodle_url") or cfg.moodle.url
 
     if refresh:
         creds = load_credentials(active)
@@ -58,16 +65,17 @@ def login(
                 username = typer.prompt(t("login.prompt_user"))
             password = getpass.getpass(t("login.prompt_pass"))
 
-    console.print(f"[dim]{t('login.connecting', url=cfg.moodle.url)}[/dim]")
+    console.print(f"[dim]{t('login.connecting', url=moodle_url)}[/dim]")
 
     try:
-        token = get_token(cfg.moodle.url, username, password, cfg.moodle.service)
+        token = get_token(moodle_url, username, password, cfg.moodle.service)
     except AuthError as e:
         console.print(f"[red]✗ {e}[/red]")
         raise typer.Exit(1)
 
     save_token(token)
     save_token_for_profile(token, active)
+    save_profile_meta(active, moodle_url=moodle_url, service=cfg.moodle.service)
 
     if save_password or refresh:
         save_credentials(username, password, active)

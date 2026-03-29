@@ -26,11 +26,18 @@ def profile_list():
     table.add_column("", width=3)
     table.add_column(t("profile.col_name"), style="bold")
     table.add_column(t("profile.col_user"))
+    table.add_column(t("profile.col_url"), style="dim")
 
     for p in profiles:
         marker = "[green]●[/green]" if p["active"] else " "
         name_style = "bold green" if p["active"] else ""
-        table.add_row(marker, f"[{name_style}]{p['name']}[/{name_style}]" if name_style else p["name"], p["username"])
+        url_display = p.get("moodle_url", "").replace("https://", "").replace("http://", "")
+        table.add_row(
+            marker,
+            f"[{name_style}]{p['name']}[/{name_style}]" if name_style else p["name"],
+            p["username"],
+            url_display,
+        )
 
     console.print(table)
     console.print(f"[dim]{t('profile.active', name=get_active_profile())}[/dim]")

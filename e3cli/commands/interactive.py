@@ -1115,10 +1115,13 @@ def _profile_menu() -> bool:
             items.append(MenuItem("──────────", disabled=True))
             for p in profiles:
                 marker = "● " if p["active"] else "  "
+                # 顯示帳號和學校 URL
+                url_short = p.get("moodle_url", "").replace("https://", "").replace("http://", "")
+                desc = f"{p['username']}  {url_short}" if url_short else p["username"]
                 items.append(MenuItem(
                     f"{marker}{p['name']}",
                     key=p["name"],
-                    description=p["username"],
+                    description=desc,
                 ))
 
         result = show_menu_fullscreen(items, title=t("profile.select"), search_enabled=False)
@@ -1179,13 +1182,15 @@ def _profile_action_menu(name: str) -> str | None:
 
 
 def _edit_profile_interactive(name: str) -> str | None:
-    """互動式編輯帳號（重新輸入帳密）。"""
+    """互動式編輯帳號（重新輸入帳密和 Moodle URL）。"""
     import getpass
     from e3cli.auth import AuthError, get_token
     from e3cli.config import load_config, save_token
     from e3cli.credential import (
         load_credentials,
+        load_profile_meta,
         save_credentials,
+        save_profile_meta,
         save_token_for_profile,
     )
 
@@ -1193,7 +1198,19 @@ def _edit_profile_interactive(name: str) -> str | None:
 
     old_creds = load_credentials(name)
     old_user = old_creds[0] if old_creds else ""
+    old_meta = load_profile_meta(name)
+    cfg = load_config()
+    old_url = old_meta.get("moodle_url", cfg.moodle.url)
 
+    # Moodle URL
+    moodle_url = _prompt(f"Moodle URL [{old_url}]")
+    if moodle_url in ("q", "b", "back"):
+        return None
+    if not moodle_url:
+        moodle_url = old_url
+    moodle_url = moodle_url.rstrip("/")
+
+    # 帳號
     username = _prompt(f"{t('login.prompt_user')} [{old_user}]")
     if username in ("q", "b", "back"):
         return None
@@ -1206,15 +1223,16 @@ def _edit_profile_interactive(name: str) -> str | None:
         _wait_enter()
         return None
 
-    cfg = load_config()
-    console.print(f"[dim]{t('login.connecting', url=cfg.moodle.url)}[/dim]")
+    console.print(f"[dim]{t('login.connecting', url=moodle_url)}[/dim]")
     try:
-        token = get_token(cfg.moodle.url, username, password, cfg.moodle.service)
+        token = get_token(moodle_url, username, password, cfg.moodle.service)
         save_token_for_profile(token, name)
         save_credentials(username, password, name)
-        # 如果是 active profile，也更新主 token
+        save_profile_meta(name, moodle_url=moodle_url, service=cfg.moodle.service)
+        # 如果是 active profile，也更新主 token 和 config
         if name == get_active_profile():
             save_token(token)
+            activate_profile(name)
         console.print(f"[green]{t('profile.edit_success', name=name)}[/green]")
         _wait_enter()
         return "edited"
@@ -1249,7 +1267,7 @@ def _add_profile_interactive() -> bool:
     import getpass
     from e3cli.auth import AuthError, get_token
     from e3cli.config import load_config, save_token
-    from e3cli.credential import save_credentials, save_token_for_profile
+    from e3cli.credential import save_credentials, save_profile_meta, save_token_for_profile
 
     console.print(f"\n[bold]{t('profile.add_new')}[/bold]")
 
@@ -1258,18 +1276,29 @@ def _add_profile_interactive() -> bool:
         return False
 
     cfg = load_config()
+
+    # 詢問 Moodle URL
+    console.print(f"[dim]{t('profile.url_hint')}[/dim]")
+    moodle_url = _prompt(f"Moodle URL [{cfg.moodle.url}]")
+    if moodle_url in ("q", "b", "back"):
+        return False
+    if not moodle_url:
+        moodle_url = cfg.moodle.url
+    moodle_url = moodle_url.rstrip("/")
+
     username = _prompt(t("login.prompt_user"))
     if not username or username in ("q", "b"):
         return False
 
     password = getpass.getpass(f"  {t('login.prompt_pass')}")
 
-    console.print(f"[dim]{t('login.connecting', url=cfg.moodle.url)}[/dim]")
+    console.print(f"[dim]{t('login.connecting', url=moodle_url)}[/dim]")
     try:
-        token = get_token(cfg.moodle.url, username, password, cfg.moodle.service)
+        token = get_token(moodle_url, username, password, cfg.moodle.service)
         save_token(token)
         save_token_for_profile(token, profile_name)
         save_credentials(username, password, profile_name)
+        save_profile_meta(profile_name, moodle_url=moodle_url, service=cfg.moodle.service)
         console.print(f"[green]{t('login.success_saved')} [profile: {profile_name}][/green]")
         _wait_enter()
         return True

@@ -31,6 +31,7 @@
 ## Features
 
 - **Login** — Moodle Web Service API authentication with encrypted credential storage
+- **Multi-profile** — Multiple accounts with per-profile Moodle URL; switch profiles to switch schools instantly
 - **Courses** — List enrolled courses grouped by semester, view course intro
 - **Assignments** — View assignments with descriptions, deadlines, submission status, and attachments
 - **Download** — Batch download course materials (current semester by default)
@@ -238,6 +239,28 @@ e3cli schedule disable                 # Remove cron job
 e3cli schedule status                  # Show current schedule
 ```
 
+### `e3cli profile`
+
+Manage multiple accounts. Each profile stores its own credentials, token, and **Moodle URL**, so you can switch between different schools instantly.
+
+```bash
+e3cli profile                  # List all profiles (with school URL)
+e3cli profile use <name>       # Switch to a profile (also switches Moodle URL)
+e3cli profile remove <name>    # Remove a profile
+```
+
+When switching profiles via `e3cli profile use` or the interactive TUI, the Moodle URL in `config.toml` is automatically updated to match the profile's school.
+
+```bash
+# Login to a different school with a new profile
+e3cli login --profile nycu --url https://e3p.nycu.edu.tw --save
+e3cli login --profile ntu --url https://cool.ntu.edu.tw --save
+
+# Switch between schools
+e3cli profile use nycu    # → connects to NYCU E3
+e3cli profile use ntu     # → connects to NTU COOL
+```
+
 ### `e3cli setup`
 
 Re-run the interactive setup wizard (language, Moodle URL, semester format, alias, download directory, login).
@@ -283,6 +306,14 @@ Launch with `e3cli i` for a full TUI experience with arrow-key navigation:
 | `←` / `Esc` | Go back |
 | `/` or type | Search / filter |
 | `q` | Quit / back |
+
+### Profile Menu
+
+Select "Profile" from the main menu to:
+- **Switch** between profiles (auto-reloads with the new school's data)
+- **Edit** a profile (change Moodle URL, username, password)
+- **Delete** a profile (cannot delete the active one)
+- **Add** a new profile with a different school URL
 
 ### Course Menu
 
@@ -355,10 +386,11 @@ Auto-created with defaults on first run. Edit to customize, or run `e3cli setup`
 e3cli uses **PBKDF2-HMAC-SHA256** key derivation with integrity verification to protect stored credentials:
 
 ```
-~/.e3cli/
+~/.e3cli/profiles/<name>/
   key               # 256-bit random encryption key  (chmod 600)
   credentials.enc   # Encrypted username + password   (chmod 600)
   token             # Moodle API token                (chmod 600)
+  profile.json      # Moodle URL and service config
 ```
 
 | Measure | Detail |
@@ -405,9 +437,9 @@ See [`CLAUDE.md`](./CLAUDE.md) and [`e3cli/agent_prompt.md`](./e3cli/agent_promp
 | Path | Purpose |
 |------|---------|
 | `~/.e3cli/config.toml` | User configuration |
-| `~/.e3cli/token` | Moodle API token (chmod 600) |
-| `~/.e3cli/key` | Encryption key (chmod 600) |
-| `~/.e3cli/credentials.enc` | Encrypted credentials (chmod 600) |
+| `~/.e3cli/token` | Active profile's Moodle API token (chmod 600) |
+| `~/.e3cli/active_profile` | Active profile name |
+| `~/.e3cli/profiles/<name>/` | Per-profile credentials, token, key, and Moodle URL |
 | `~/.e3cli/data/e3cli.db` | SQLite tracking DB |
 | `~/e3-downloads/` | Downloaded course materials |
 
@@ -428,7 +460,7 @@ make build     # python -m build
 
 - [x] Interactive TUI with arrow-key navigation
 - [x] Semester filtering (current semester by default)
-- [x] Multi-school Moodle support
+- [x] Multi-school Moodle support (per-profile URL)
 - [x] Assignment descriptions and attachments
 - [x] Course announcements
 - [x] Course members and messaging

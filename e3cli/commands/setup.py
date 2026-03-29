@@ -15,7 +15,7 @@ from rich.text import Text
 from e3cli import __version__
 from e3cli.auth import AuthError, get_token
 from e3cli.config import CONFIG_DIR, CONFIG_FILE, ensure_dirs, save_token
-from e3cli.credential import list_profiles, save_credentials, save_token_for_profile
+from e3cli.credential import list_profiles, save_credentials, save_profile_meta, save_token_for_profile
 from e3cli.i18n import set_lang, t
 
 console = Console()
@@ -260,6 +260,7 @@ alias = "{alias}"
             token = get_token(url, username, password)
             save_token(token)
             save_token_for_profile(token, profile_name)
+            save_profile_meta(profile_name, moodle_url=url)
 
             save_creds = typer.confirm(f"  {t('setup.want_save_creds')}", default=True)
             if save_creds:
