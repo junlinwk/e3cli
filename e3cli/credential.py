@@ -196,6 +196,9 @@ def clear_credentials(profile: str | None = None) -> None:
         if TOKEN_FILE.exists():
             TOKEN_FILE.write_bytes(b"\x00" * max(TOKEN_FILE.stat().st_size, 1))
             TOKEN_FILE.unlink()
+    # 清除空目錄
+    if pdir.exists() and not any(pdir.iterdir()):
+        pdir.rmdir()
 
 
 def has_credentials(profile: str | None = None) -> bool:

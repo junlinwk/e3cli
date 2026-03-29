@@ -1103,41 +1103,145 @@ def _edit_submission(client, db, assignment):
 
 def _profile_menu() -> bool:
     """帳號切換選單。回傳是否有切換。"""
-    profiles = list_profiles()
+    switched = False
+    while True:
+        profiles = list_profiles()
+
+        items = []
+        # 新增帳號選項在最上面
+        items.append(MenuItem(f"+ {t('profile.add_new')}", key="_add_new"))
+
+        if profiles:
+            items.append(MenuItem("──────────", disabled=True))
+            for p in profiles:
+                marker = "● " if p["active"] else "  "
+                items.append(MenuItem(
+                    f"{marker}{p['name']}",
+                    key=p["name"],
+                    description=p["username"],
+                ))
+
+        result = show_menu_fullscreen(items, title=t("profile.select"), search_enabled=False)
+
+        if result.action in ("back", "quit"):
+            return switched
+
+        if result.action == "select":
+            if result.key == "_add_new":
+                if _add_profile_interactive():
+                    switched = True
+                    return switched
+                continue
+            # 選擇了現有帳號 → 進入管理子選單
+            sub_result = _profile_action_menu(result.key)
+            if sub_result == "switched":
+                switched = True
+                return switched
+            # "edited", "deleted", None → 留在 profile 列表
+            continue
+
+    return switched
+
+
+def _profile_action_menu(name: str) -> str | None:
+    """帳號管理子選單。回傳 "switched"/"edited"/"deleted"/None。"""
+    active = get_active_profile()
+    is_active = name == active
 
     items = []
-    # 新增帳號選項在最上面
-    items.append(MenuItem(f"+ {t('profile.add_new')}", key="_add_new"))
+    if not is_active:
+        items.append(MenuItem(t("profile.switch"), key="switch"))
+    items.append(MenuItem(t("profile.edit"), key="edit"))
+    if not is_active:
+        items.append(MenuItem(f"[red]{t('profile.delete')}[/red]", key="delete"))
 
-    if profiles:
-        items.append(MenuItem("──────────", disabled=True))
-        for p in profiles:
-            marker = "● " if p["active"] else "  "
-            items.append(MenuItem(
-                f"{marker}{p['name']}",
-                key=p["name"],
-                description=p["username"],
-            ))
-
-    result = show_menu_fullscreen(items, title=t("profile.select"), search_enabled=False)
+    result = show_menu_fullscreen(items, title=t("profile.manage", name=name), search_enabled=False)
 
     if result.action in ("back", "quit"):
-        return False
+        return None
 
-    if result.action == "select":
-        if result.key == "_add_new":
-            return _add_profile_interactive()
-        name = result.key
+    if result.key == "switch":
         if activate_profile(name):
             console.print(f"[green]{t('profile.switched', name=name)}[/green]")
-            _wait_enter()
-            return True
+            return "switched"
         else:
             console.print(f"[red]{t('profile.not_found', name=name)}[/red]")
             _wait_enter()
-            return False
+            return None
 
-    return False
+    elif result.key == "edit":
+        return _edit_profile_interactive(name)
+
+    elif result.key == "delete":
+        return _delete_profile_interactive(name)
+
+    return None
+
+
+def _edit_profile_interactive(name: str) -> str | None:
+    """互動式編輯帳號（重新輸入帳密）。"""
+    import getpass
+    from e3cli.auth import AuthError, get_token
+    from e3cli.config import load_config, save_token
+    from e3cli.credential import (
+        load_credentials,
+        save_credentials,
+        save_token_for_profile,
+    )
+
+    console.print(f"\n[bold]{t('profile.edit')} — {name}[/bold]")
+
+    old_creds = load_credentials(name)
+    old_user = old_creds[0] if old_creds else ""
+
+    username = _prompt(f"{t('login.prompt_user')} [{old_user}]")
+    if username in ("q", "b", "back"):
+        return None
+    if not username:
+        username = old_user
+
+    password = getpass.getpass(f"  {t('login.prompt_pass')}")
+    if not password:
+        console.print("[yellow]Cancelled[/yellow]")
+        _wait_enter()
+        return None
+
+    cfg = load_config()
+    console.print(f"[dim]{t('login.connecting', url=cfg.moodle.url)}[/dim]")
+    try:
+        token = get_token(cfg.moodle.url, username, password, cfg.moodle.service)
+        save_token_for_profile(token, name)
+        save_credentials(username, password, name)
+        # 如果是 active profile，也更新主 token
+        if name == get_active_profile():
+            save_token(token)
+        console.print(f"[green]{t('profile.edit_success', name=name)}[/green]")
+        _wait_enter()
+        return "edited"
+    except AuthError as e:
+        console.print(f"[red]✗ {e}[/red]")
+        _wait_enter()
+        return None
+
+
+def _delete_profile_interactive(name: str) -> str | None:
+    """互動式刪除帳號。"""
+    from e3cli.credential import clear_credentials
+
+    if name == get_active_profile():
+        console.print(f"[red]{t('profile.cannot_delete_active')}[/red]")
+        _wait_enter()
+        return None
+
+    console.print(f"\n[bold red]{t('profile.confirm_delete', name=name)}[/bold red]")
+    ans = _prompt("y/N")
+    if ans.lower() != "y":
+        return None
+
+    clear_credentials(name)
+    console.print(f"[green]{t('profile.deleted', name=name)}[/green]")
+    _wait_enter()
+    return "deleted"
 
 
 def _add_profile_interactive() -> bool:

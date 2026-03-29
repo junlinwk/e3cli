@@ -302,6 +302,14 @@ _STRINGS: dict[str, dict[str, str]] = {
     "profile.removed": {"zh": "✓ 已刪除 {name}", "en": "✓ Removed {name}"},
     "profile.select": {"zh": "選擇帳號", "en": "Select profile"},
     "profile.add_new": {"zh": "新增帳號", "en": "Add new profile"},
+    "profile.edit": {"zh": "編輯帳號", "en": "Edit profile"},
+    "profile.delete": {"zh": "刪除帳號", "en": "Delete profile"},
+    "profile.switch": {"zh": "切換到此帳號", "en": "Switch to this profile"},
+    "profile.manage": {"zh": "管理帳號: {name}", "en": "Manage profile: {name}"},
+    "profile.edit_success": {"zh": "✓ 帳號 {name} 已更新", "en": "✓ Profile {name} updated"},
+    "profile.confirm_delete": {"zh": "確定要刪除帳號 {name}？此操作無法復原。", "en": "Delete profile {name}? This cannot be undone."},
+    "profile.deleted": {"zh": "✓ 已刪除帳號 {name}", "en": "✓ Profile {name} deleted"},
+    "profile.cannot_delete_active": {"zh": "無法刪除目前使用中的帳號，請先切換到其他帳號。", "en": "Cannot delete the active profile. Switch to another profile first."},
 
     # === Edit submission ===
     "edit.title": {"zh": "編輯提交", "en": "Edit Submission"},
