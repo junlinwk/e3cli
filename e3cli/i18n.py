@@ -316,6 +316,14 @@ _STRINGS: dict[str, dict[str, str]] = {
     "profile.url_ok": {"zh": "✓ 網址有效", "en": "✓ URL is valid"},
     "profile.url_invalid": {"zh": "✗ 無法連線到此網址: {reason}", "en": "✗ Cannot connect to this URL: {reason}"},
     "profile.url_retry": {"zh": "請重新輸入網址", "en": "Please re-enter the URL"},
+    "profile.url_sso_only": {
+        "zh": "⚠ 此學校的 Moodle 僅支援 SSO 登入，目前 e3cli 尚不支援。",
+        "en": "⚠ This school's Moodle only supports SSO login, which e3cli does not support yet.",
+    },
+    "profile.url_sso_continue": {
+        "zh": "仍要繼續嗎？",
+        "en": "Continue anyway?",
+    },
     "profile.token_invalid": {
         "zh": "帳號 {name} 的 token 已失效 ({url})，請執行 e3cli login --refresh 重新登入。",
         "en": "Token for profile {name} is invalid ({url}). Run e3cli login --refresh to re-login.",

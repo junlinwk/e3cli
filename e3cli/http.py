@@ -99,3 +99,68 @@ def validate_moodle_url(url: str) -> tuple[bool, str]:
         return False, f"SSL error: {e}"
     except requests.exceptions.RequestException as e:
         return False, str(e)
+
+
+def check_sso_only(url: str) -> bool:
+    """Check if a Moodle site only supports SSO login (no native auth).
+
+    Looks at the login page for SSO redirect links and checks whether
+    the native login form is functional.
+    """
+    import re
+
+    url = url.rstrip("/")
+    session = get_session_for_url(url)
+    try:
+        resp = session.get(f"{url}/login/index.php", timeout=10, allow_redirects=True)
+        if resp.status_code != 200:
+            return False
+        text = resp.text
+
+        # Indicators of SSO-only: login page has SSO links/buttons
+        sso_patterns = [
+            r'potentialidp',                # Moodle IDP list
+            r'auth/shibboleth',             # Shibboleth
+            r'auth/cas',                    # CAS
+            r'auth/saml2',                  # SAML2
+            r'SSO',                         # Generic SSO keyword in buttons/links
+        ]
+        has_sso = any(re.search(p, text, re.IGNORECASE) for p in sso_patterns)
+        if not has_sso:
+            return False
+
+        # If SSO is present, test whether native login actually works
+        # by sending a dummy login — if the server processes it via
+        # token.php (returns invalidlogin), native auth is enabled
+        # But we also need to check if the login form action points
+        # to an external SSO URL (not Moodle itself)
+        form_actions = re.findall(
+            r'<form[^>]*id=["\']login["\'][^>]*action=["\']([^"\']+)["\']', text
+        )
+        if not form_actions:
+            # Also check for form with loginbtn
+            form_actions = re.findall(
+                r'<form[^>]*action=["\']([^"\']+)["\'][^>]*>[\s\S]*?id=["\']loginbtn["\']', text
+            )
+
+        # Check if login form posts to the Moodle site itself
+        parsed_url = urlparse(url)
+        for action in form_actions:
+            parsed_action = urlparse(action)
+            action_host = parsed_action.hostname or parsed_url.hostname
+            if action_host and action_host != parsed_url.hostname:
+                # Form posts to external SSO — SSO only
+                return True
+
+        # Final check: see if SSO link contains a redirect/login URL
+        # pointing to an external identity provider
+        sso_links = re.findall(r'href=["\']([^"\']*(?:SSO|sso|cas|saml|shib)[^"\']*)["\']', text)
+        for link in sso_links:
+            link_parsed = urlparse(link)
+            link_host = link_parsed.hostname
+            if link_host and link_host != parsed_url.hostname:
+                return True
+
+        return False
+    except Exception:
+        return False

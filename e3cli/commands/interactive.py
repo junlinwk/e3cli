@@ -1265,7 +1265,7 @@ def _delete_profile_interactive(name: str) -> str | None:
 
 def _validate_url_interactive(default_url: str) -> str | None:
     """互動式詢問並驗證 Moodle URL。回傳有效 URL 或 None（取消）。"""
-    from e3cli.http import validate_moodle_url
+    from e3cli.http import check_sso_only, validate_moodle_url
 
     console.print(f"[dim]{t('profile.url_hint')}[/dim]")
     while True:
@@ -1278,12 +1278,20 @@ def _validate_url_interactive(default_url: str) -> str | None:
 
         console.print(f"[dim]{t('profile.url_checking')}[/dim]")
         ok, reason = validate_moodle_url(moodle_url)
-        if ok:
-            console.print(f"[green]{t('profile.url_ok')}[/green]")
-            return moodle_url
-        else:
+        if not ok:
             console.print(f"[red]{t('profile.url_invalid', reason=reason)}[/red]")
             console.print(f"[yellow]{t('profile.url_retry')}[/yellow]")
+            continue
+
+        # 檢查是否為 SSO-only
+        if check_sso_only(moodle_url):
+            console.print(f"[yellow]{t('profile.url_sso_only')}[/yellow]")
+            ans = _prompt(f"{t('profile.url_sso_continue')} (y/N)")
+            if ans.lower() != "y":
+                continue
+
+        console.print(f"[green]{t('profile.url_ok')}[/green]")
+        return moodle_url
 
 
 def _add_profile_interactive() -> bool:

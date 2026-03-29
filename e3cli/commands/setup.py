@@ -182,7 +182,7 @@ def run_setup_wizard() -> None:
     else:
         console.print("[dim]Enter your Moodle URL. Any school's Moodle platform is supported.[/dim]")
 
-    from e3cli.http import validate_moodle_url
+    from e3cli.http import check_sso_only, validate_moodle_url
     while True:
         url = typer.prompt(
             "Moodle URL (NYCU E3)",
@@ -192,15 +192,22 @@ def run_setup_wizard() -> None:
 
         console.print(f"[dim]{t('profile.url_checking')}[/dim]")
         ok, reason = validate_moodle_url(url)
-        if ok:
-            console.print(f"[green]  {t('profile.url_ok')}[/green]")
-            break
-        else:
+        if not ok:
             console.print(f"[red]  {t('profile.url_invalid', reason=reason)}[/red]")
             if lang == "zh":
                 console.print("[yellow]  請確認網址是否正確後重新輸入[/yellow]")
             else:
                 console.print("[yellow]  Please check the URL and try again[/yellow]")
+            continue
+
+        # 檢查 SSO
+        if check_sso_only(url):
+            console.print(f"[yellow]  {t('profile.url_sso_only')}[/yellow]")
+            if not typer.confirm(f"  {t('profile.url_sso_continue')}", default=False):
+                continue
+
+        console.print(f"[green]  {t('profile.url_ok')}[/green]")
+        break
 
     console.print()
 

@@ -32,4 +32,12 @@ def get_token(base_url: str, username: str, password: str, service: str = "moodl
 
     error_msg = data.get("error", "未知錯誤")
     error_code = data.get("errorcode", "")
+
+    # 登入失敗時檢查是否為 SSO-only 站點，提供更明確的提示
+    if error_code == "invalidlogin":
+        from e3cli.http import check_sso_only
+        if check_sso_only(base_url):
+            from e3cli.i18n import t
+            raise AuthError(t("profile.url_sso_only"))
+
     raise AuthError(f"登入失敗 [{error_code}]: {error_msg}")
