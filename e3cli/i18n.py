@@ -301,6 +301,7 @@ _STRINGS: dict[str, dict[str, str]] = {
     "profile.confirm_remove": {"zh": "確認刪除 profile {name}？", "en": "Remove profile {name}?"},
     "profile.removed": {"zh": "✓ 已刪除 {name}", "en": "✓ Removed {name}"},
     "profile.select": {"zh": "選擇帳號", "en": "Select profile"},
+    "profile.add_new": {"zh": "新增帳號", "en": "Add new profile"},
 
     # === Edit submission ===
     "edit.title": {"zh": "編輯提交", "en": "Edit Submission"},

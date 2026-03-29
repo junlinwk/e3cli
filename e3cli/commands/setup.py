@@ -15,7 +15,7 @@ from rich.text import Text
 from e3cli import __version__
 from e3cli.auth import AuthError, get_token
 from e3cli.config import CONFIG_DIR, CONFIG_FILE, ensure_dirs, save_token
-from e3cli.credential import save_credentials
+from e3cli.credential import list_profiles, save_credentials, save_token_for_profile
 from e3cli.i18n import set_lang, t
 
 console = Console()
@@ -236,6 +236,22 @@ alias = "{alias}"
     want_login = typer.confirm(t("setup.want_login"), default=True)
 
     if want_login:
+        # 詢問 profile 名稱
+        existing = list_profiles()
+        if existing:
+            names = ", ".join(p["name"] for p in existing)
+            if lang == "zh":
+                console.print(f"[dim]  已有帳號: {names}[/dim]")
+                console.print("[dim]  輸入新名稱建立新帳號，或輸入已有名稱覆蓋[/dim]")
+            else:
+                console.print(f"[dim]  Existing profiles: {names}[/dim]")
+                console.print("[dim]  Enter a new name to create, or existing name to overwrite[/dim]")
+        profile_name = typer.prompt(
+            "  Profile name",
+            default="default",
+            show_default=True,
+        ).strip()
+
         username = typer.prompt(f"  {t('setup.prompt_id')}")
         password = getpass.getpass(f"  {t('login.prompt_pass')}")
 
@@ -243,11 +259,12 @@ alias = "{alias}"
         try:
             token = get_token(url, username, password)
             save_token(token)
+            save_token_for_profile(token, profile_name)
 
             save_creds = typer.confirm(f"  {t('setup.want_save_creds')}", default=True)
             if save_creds:
-                save_credentials(username, password)
-                console.print(f"[green]  {t('login.success_saved')}[/green]")
+                save_credentials(username, password, profile_name)
+                console.print(f"[green]  {t('login.success_saved')} [profile: {profile_name}][/green]")
             else:
                 console.print(f"[green]  {t('login.success')}[/green]")
         except AuthError as e:

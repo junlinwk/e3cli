@@ -1105,19 +1105,19 @@ def _profile_menu() -> bool:
     """帳號切換選單。回傳是否有切換。"""
     profiles = list_profiles()
 
-    if not profiles:
-        console.print(f"[dim]{t('profile.empty')}[/dim]")
-        _wait_enter()
-        return False
-
     items = []
-    for p in profiles:
-        marker = "● " if p["active"] else "  "
-        items.append(MenuItem(
-            f"{marker}{p['name']}",
-            key=p["name"],
-            description=p["username"],
-        ))
+    # 新增帳號選項在最上面
+    items.append(MenuItem(f"+ {t('profile.add_new')}", key="_add_new"))
+
+    if profiles:
+        items.append(MenuItem("──────────", disabled=True))
+        for p in profiles:
+            marker = "● " if p["active"] else "  "
+            items.append(MenuItem(
+                f"{marker}{p['name']}",
+                key=p["name"],
+                description=p["username"],
+            ))
 
     result = show_menu_fullscreen(items, title=t("profile.select"), search_enabled=False)
 
@@ -1125,6 +1125,8 @@ def _profile_menu() -> bool:
         return False
 
     if result.action == "select":
+        if result.key == "_add_new":
+            return _add_profile_interactive()
         name = result.key
         if activate_profile(name):
             console.print(f"[green]{t('profile.switched', name=name)}[/green]")
@@ -1136,6 +1138,41 @@ def _profile_menu() -> bool:
             return False
 
     return False
+
+
+def _add_profile_interactive() -> bool:
+    """互動式新增帳號。"""
+    import getpass
+    from e3cli.auth import AuthError, get_token
+    from e3cli.config import load_config, save_token
+    from e3cli.credential import save_credentials, save_token_for_profile
+
+    console.print(f"\n[bold]{t('profile.add_new')}[/bold]")
+
+    profile_name = _prompt("Profile name")
+    if not profile_name or profile_name in ("q", "b", "back"):
+        return False
+
+    cfg = load_config()
+    username = _prompt(t("login.prompt_user"))
+    if not username or username in ("q", "b"):
+        return False
+
+    password = getpass.getpass(f"  {t('login.prompt_pass')}")
+
+    console.print(f"[dim]{t('login.connecting', url=cfg.moodle.url)}[/dim]")
+    try:
+        token = get_token(cfg.moodle.url, username, password, cfg.moodle.service)
+        save_token(token)
+        save_token_for_profile(token, profile_name)
+        save_credentials(username, password, profile_name)
+        console.print(f"[green]{t('login.success_saved')} [profile: {profile_name}][/green]")
+        _wait_enter()
+        return True
+    except AuthError as e:
+        console.print(f"[red]✗ {e}[/red]")
+        _wait_enter()
+        return False
 
 
 # ─── Sync Menu ───────────────────────────────────────────────────────────
