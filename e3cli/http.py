@@ -67,3 +67,35 @@ def get_session_for_url(url: str) -> requests.Session:
     except Exception:
         # If detection itself fails for non-SSL reasons, return a normal session
         return create_session()
+
+
+def validate_moodle_url(url: str) -> tuple[bool, str]:
+    """Validate whether a URL points to a reachable Moodle instance.
+
+    Returns (ok, message).  When ok is False, message describes the problem
+    in a user-friendly way.
+    """
+    url = url.rstrip("/")
+
+    # Basic format check
+    parsed = urlparse(url)
+    if not parsed.scheme or not parsed.hostname:
+        return False, "Invalid URL format"
+
+    # Try to reach the login/token.php endpoint (Moodle-specific)
+    session = get_session_for_url(url)
+    try:
+        resp = session.get(f"{url}/login/token.php", timeout=10, allow_redirects=True)
+        # Moodle token endpoint returns JSON even without params
+        # A non-Moodle site would return HTML 404 or something else
+        if resp.status_code == 200:
+            return True, "OK"
+        return False, f"HTTP {resp.status_code}"
+    except requests.exceptions.ConnectionError:
+        return False, "Connection failed — check the URL"
+    except requests.exceptions.Timeout:
+        return False, "Connection timed out"
+    except requests.exceptions.SSLError as e:
+        return False, f"SSL error: {e}"
+    except requests.exceptions.RequestException as e:
+        return False, str(e)

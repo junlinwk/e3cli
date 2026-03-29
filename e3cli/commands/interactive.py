@@ -160,7 +160,11 @@ def _main_menu(client, db, cfg, info, all_courses):
                 active = get_active_profile()
                 client = get_client()
                 cfg = load_config()
-                info = get_site_info(client)
+                new_info = _try_load_site(client)
+                if new_info is None:
+                    _wait_enter()
+                    continue
+                info = new_info
                 all_courses = get_enrolled_courses(client, info["userid"])
                 current_courses = filter_current_semester(all_courses)
                 if not current_courses:
@@ -1202,13 +1206,10 @@ def _edit_profile_interactive(name: str) -> str | None:
     cfg = load_config()
     old_url = old_meta.get("moodle_url", cfg.moodle.url)
 
-    # Moodle URL
-    moodle_url = _prompt(f"Moodle URL [{old_url}]")
-    if moodle_url in ("q", "b", "back"):
+    # Moodle URL（驗證）
+    moodle_url = _validate_url_interactive(old_url)
+    if moodle_url is None:
         return None
-    if not moodle_url:
-        moodle_url = old_url
-    moodle_url = moodle_url.rstrip("/")
 
     # 帳號
     username = _prompt(f"{t('login.prompt_user')} [{old_user}]")
@@ -1262,6 +1263,29 @@ def _delete_profile_interactive(name: str) -> str | None:
     return "deleted"
 
 
+def _validate_url_interactive(default_url: str) -> str | None:
+    """互動式詢問並驗證 Moodle URL。回傳有效 URL 或 None（取消）。"""
+    from e3cli.http import validate_moodle_url
+
+    console.print(f"[dim]{t('profile.url_hint')}[/dim]")
+    while True:
+        moodle_url = _prompt(f"Moodle URL [{default_url}]")
+        if moodle_url in ("q", "b", "back"):
+            return None
+        if not moodle_url:
+            moodle_url = default_url
+        moodle_url = moodle_url.rstrip("/")
+
+        console.print(f"[dim]{t('profile.url_checking')}[/dim]")
+        ok, reason = validate_moodle_url(moodle_url)
+        if ok:
+            console.print(f"[green]{t('profile.url_ok')}[/green]")
+            return moodle_url
+        else:
+            console.print(f"[red]{t('profile.url_invalid', reason=reason)}[/red]")
+            console.print(f"[yellow]{t('profile.url_retry')}[/yellow]")
+
+
 def _add_profile_interactive() -> bool:
     """互動式新增帳號。"""
     import getpass
@@ -1277,14 +1301,10 @@ def _add_profile_interactive() -> bool:
 
     cfg = load_config()
 
-    # 詢問 Moodle URL
-    console.print(f"[dim]{t('profile.url_hint')}[/dim]")
-    moodle_url = _prompt(f"Moodle URL [{cfg.moodle.url}]")
-    if moodle_url in ("q", "b", "back"):
+    # 詢問並驗證 Moodle URL
+    moodle_url = _validate_url_interactive(cfg.moodle.url)
+    if moodle_url is None:
         return False
-    if not moodle_url:
-        moodle_url = cfg.moodle.url
-    moodle_url = moodle_url.rstrip("/")
 
     username = _prompt(t("login.prompt_user"))
     if not username or username in ("q", "b"):
@@ -1393,6 +1413,28 @@ def _do_sync_courses(client, db, cfg, courses):
 
 # ─── Entry Point ─────────────────────────────────────────────────────────
 
+def _try_load_site(client) -> dict | None:
+    """嘗試載入站點資訊，失敗時顯示友善訊息。"""
+    from e3cli.api.client import MoodleAPIError
+    from e3cli.credential import load_profile_meta
+
+    try:
+        return get_site_info(client)
+    except MoodleAPIError:
+        active = get_active_profile()
+        meta = load_profile_meta(active)
+        url = meta.get("moodle_url", "")
+        console.print(f"[red]{t('profile.token_invalid', name=active, url=url)}[/red]")
+        return None
+    except Exception as e:
+        active = get_active_profile()
+        meta = load_profile_meta(active)
+        url = meta.get("moodle_url", "")
+        console.print(f"[red]{t('profile.token_invalid', name=active, url=url)}[/red]")
+        console.print(f"[dim]{e}[/dim]")
+        return None
+
+
 @app.callback(invoke_without_command=True)
 def interactive():
     """Launch interactive TUI mode."""
@@ -1400,7 +1442,11 @@ def interactive():
     db = get_db()
     cfg = load_config()
 
-    info = get_site_info(client)
+    info = _try_load_site(client)
+    if info is None:
+        db.close()
+        raise typer.Exit(1)
+
     all_courses = get_enrolled_courses(client, info["userid"])
 
     if not all_courses:

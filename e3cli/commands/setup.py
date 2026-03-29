@@ -181,11 +181,27 @@ def run_setup_wizard() -> None:
         console.print("[dim]輸入你的 Moodle 網址。支援任何學校的 Moodle 平台。[/dim]")
     else:
         console.print("[dim]Enter your Moodle URL. Any school's Moodle platform is supported.[/dim]")
-    url = typer.prompt(
-        "Moodle URL (NYCU E3)",
-        default="https://e3p.nycu.edu.tw",
-        show_default=True,
-    ).rstrip("/")
+
+    from e3cli.http import validate_moodle_url
+    while True:
+        url = typer.prompt(
+            "Moodle URL (NYCU E3)",
+            default="https://e3p.nycu.edu.tw",
+            show_default=True,
+        ).rstrip("/")
+
+        console.print(f"[dim]{t('profile.url_checking')}[/dim]")
+        ok, reason = validate_moodle_url(url)
+        if ok:
+            console.print(f"[green]  {t('profile.url_ok')}[/green]")
+            break
+        else:
+            console.print(f"[red]  {t('profile.url_invalid', reason=reason)}[/red]")
+            if lang == "zh":
+                console.print("[yellow]  請確認網址是否正確後重新輸入[/yellow]")
+            else:
+                console.print("[yellow]  Please check the URL and try again[/yellow]")
+
     console.print()
 
     # Step 2: Semester format
