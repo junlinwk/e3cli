@@ -289,6 +289,19 @@ _STRINGS: dict[str, dict[str, str]] = {
     "announce.view_detail": {"zh": "輸入編號查看內容，q 返回", "en": "Enter # to view, q to go back"},
     "announce.opt_course": {"zh": "課程名稱（模糊匹配）", "en": "Course name (fuzzy match)"},
 
+    # === Profile ===
+    "profile.title": {"zh": "帳號列表", "en": "Profiles"},
+    "profile.col_name": {"zh": "名稱", "en": "Name"},
+    "profile.col_user": {"zh": "帳號", "en": "Username"},
+    "profile.active": {"zh": "目前使用: {name}", "en": "Active: {name}"},
+    "profile.switched": {"zh": "✓ 已切換到 {name}", "en": "✓ Switched to {name}"},
+    "profile.not_found": {"zh": "找不到 profile: {name}", "en": "Profile not found: {name}"},
+    "profile.available": {"zh": "可用的 profiles", "en": "Available profiles"},
+    "profile.empty": {"zh": "沒有儲存的帳號。使用 e3cli login --save 登入。", "en": "No profiles. Run e3cli login --save to create one."},
+    "profile.confirm_remove": {"zh": "確認刪除 profile {name}？", "en": "Remove profile {name}?"},
+    "profile.removed": {"zh": "✓ 已刪除 {name}", "en": "✓ Removed {name}"},
+    "profile.select": {"zh": "選擇帳號", "en": "Select profile"},
+
     # === Edit submission ===
     "edit.title": {"zh": "編輯提交", "en": "Edit Submission"},
     "edit.current_files": {"zh": "目前已繳交的檔案:", "en": "Currently submitted files:"},

@@ -25,6 +25,7 @@ from e3cli.api.messages import send_message
 from e3cli.api.site import get_site_info
 from e3cli.commands._common import get_client, get_db
 from e3cli.config import load_config
+from e3cli.credential import activate_profile, get_active_profile, list_profiles
 from e3cli.formatting import format_duedate, format_submission_status, sort_assignments
 from e3cli.i18n import t
 from e3cli.semester import (
@@ -118,10 +119,12 @@ def _main_menu(client, db, cfg, info, all_courses):
     user = info.get("fullname", "")
 
     last_cursor = 0
+    active = get_active_profile()
+
     while True:
         console.print()
         console.print(Panel(
-            f"[bold]{user}[/bold]  |  {sem}  |  {len(current_courses)} courses",
+            f"[bold]{user}[/bold]  |  {sem}  |  {len(current_courses)} courses  |  [dim]profile: {active}[/dim]",
             title=f"[bold cyan]e3cli v{__version__}[/bold cyan]",
             border_style="cyan",
         ))
@@ -131,6 +134,7 @@ def _main_menu(client, db, cfg, info, all_courses):
             MenuItem(f"{t('tui.select_course')} ({t('sem.all_semesters')})", key="all"),
             MenuItem(t("tui.assignments"), key="assignments"),
             MenuItem(t("tui.sync_courses"), key="sync"),
+            MenuItem(f"{t('profile.select')} [{active}]", key="profile"),
             MenuItem(t("tui.quit"), key="quit"),
         ]
 
@@ -149,6 +153,19 @@ def _main_menu(client, db, cfg, info, all_courses):
             _all_assignments_view(client, db, info, current_courses)
         elif result.key == "sync":
             _sync_menu(client, db, cfg, info, all_courses)
+        elif result.key == "profile":
+            switched = _profile_menu()
+            if switched:
+                # 重新載入
+                active = get_active_profile()
+                client = get_client()
+                cfg = load_config()
+                info = get_site_info(client)
+                all_courses = get_enrolled_courses(client, info["userid"])
+                current_courses = filter_current_semester(all_courses)
+                if not current_courses:
+                    current_courses = all_courses
+                user = info.get("fullname", "")
 
 
 # ─── Course List ─────────────────────────────────────────────────────────
@@ -1080,6 +1097,45 @@ def _edit_submission(client, db, assignment):
         _restore_tab_completion(old_state)
         _wait_enter()
         return
+
+
+# ─── Profile Menu ─────────────────────────────────────────────────────────
+
+def _profile_menu() -> bool:
+    """帳號切換選單。回傳是否有切換。"""
+    profiles = list_profiles()
+
+    if not profiles:
+        console.print(f"[dim]{t('profile.empty')}[/dim]")
+        _wait_enter()
+        return False
+
+    items = []
+    for p in profiles:
+        marker = "● " if p["active"] else "  "
+        items.append(MenuItem(
+            f"{marker}{p['name']}",
+            key=p["name"],
+            description=p["username"],
+        ))
+
+    result = show_menu_fullscreen(items, title=t("profile.select"), search_enabled=False)
+
+    if result.action in ("back", "quit"):
+        return False
+
+    if result.action == "select":
+        name = result.key
+        if activate_profile(name):
+            console.print(f"[green]{t('profile.switched', name=name)}[/green]")
+            _wait_enter()
+            return True
+        else:
+            console.print(f"[red]{t('profile.not_found', name=name)}[/red]")
+            _wait_enter()
+            return False
+
+    return False
 
 
 # ─── Sync Menu ───────────────────────────────────────────────────────────

@@ -16,6 +16,7 @@ from e3cli.commands.login import app as login_app
 from e3cli.commands.logout import app as logout_app
 from e3cli.commands.members import app as members_app
 from e3cli.commands.message import app as message_app
+from e3cli.commands.profile import app as profile_app
 from e3cli.commands.schedule import app as schedule_app
 from e3cli.commands.setup import app as setup_app
 from e3cli.commands.setup import is_first_run, run_setup_wizard
@@ -42,6 +43,7 @@ app.add_typer(setup_app, name="setup", help=t("cli.setup"))
 app.add_typer(members_app, name="members", help=t("cli.members"))
 app.add_typer(message_app, name="message", help=t("cli.message"))
 app.add_typer(announcements_cli_app, name="announcements", help=t("cli.announcements"))
+app.add_typer(profile_app, name="profile", help="Manage profiles")
 
 
 @app.command()
