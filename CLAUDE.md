@@ -43,6 +43,12 @@ e3cli submit <ASSIGNMENT_ID> <FILE_PATH>
 # Re-submit (overwrite) — same command, overwrites previous
 e3cli submit <ASSIGNMENT_ID> <NEW_FILE_PATH>
 
+# Profile management (multi-account, multi-school)
+e3cli profile                      # list all profiles (with Moodle URL)
+e3cli profile use <name>           # switch profile (also switches Moodle URL)
+e3cli profile remove <name>        # remove a profile
+e3cli login --profile <name> --url <moodle-url> --save  # add profile for different school
+
 # Interactive mode (arrow keys)
 e3cli i
 

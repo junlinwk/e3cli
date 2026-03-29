@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import requests
+from e3cli.http import get_session_for_url
 
 
 class AuthError(Exception):
@@ -16,8 +16,10 @@ def get_token(base_url: str, username: str, password: str, service: str = "moodl
     POST {base_url}/login/token.php
     成功回傳 token 字串，失敗拋出 AuthError。
     """
-    url = f"{base_url.rstrip('/')}/login/token.php"
-    resp = requests.post(url, data={
+    base_url = base_url.rstrip("/")
+    url = f"{base_url}/login/token.php"
+    session = get_session_for_url(base_url)
+    resp = session.post(url, data={
         "username": username,
         "password": password,
         "service": service,

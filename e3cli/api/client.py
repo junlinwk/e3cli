@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import requests
+from e3cli.http import get_session_for_url
 
 
 class MoodleAPIError(Exception):
@@ -19,7 +19,7 @@ class MoodleClient:
     def __init__(self, base_url: str, token: str):
         self.base_url = base_url.rstrip("/")
         self.token = token
-        self.session = requests.Session()
+        self.session = get_session_for_url(self.base_url)
         self.rest_endpoint = f"{self.base_url}/webservice/rest/server.php"
         self.upload_endpoint = f"{self.base_url}/webservice/upload.php"
 

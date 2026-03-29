@@ -182,7 +182,7 @@ def run_setup_wizard() -> None:
     else:
         console.print("[dim]Enter your Moodle URL. Any school's Moodle platform is supported.[/dim]")
     url = typer.prompt(
-        "Moodle URL",
+        "Moodle URL (NYCU E3)",
         default="https://e3p.nycu.edu.tw",
         show_default=True,
     ).rstrip("/")

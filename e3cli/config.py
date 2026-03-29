@@ -89,6 +89,11 @@ def load_config() -> Config:
     from e3cli.semester import set_semester_format
     set_semester_format(cfg.general.semester_format)
 
+    # 依據 active profile 名稱建立子目錄
+    from e3cli.credential import get_active_profile
+    profile_name = get_active_profile()
+    cfg.storage.download_dir = cfg.storage.download_dir / profile_name
+
     return cfg
 
 
