@@ -62,7 +62,7 @@ def assignments(
             course_list = filtered
 
     courseids = [c["id"] for c in course_list]
-    course_names = {c["id"]: c.get("shortname", "") for c in course_list}
+    course_names = {c["id"]: c.get("fullname", "") or c.get("shortname", "") for c in course_list}
 
     if not courseids:
         console.print(f"[yellow]{t('common.no_courses')}[/yellow]")

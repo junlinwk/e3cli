@@ -1,3 +1,3 @@
 """E3CLI — NYCU E3 Moodle Automation CLI Tool"""
 
-__version__ = "0.8.4"
+__version__ = "0.8.5"

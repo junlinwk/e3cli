@@ -95,7 +95,7 @@ def sync(
     for c in course_list:
         cid = c["id"]
         courseids.append(cid)
-        course_names[cid] = c.get("shortname", "")
+        course_names[cid] = c.get("fullname", "") or c.get("shortname", "")
         db.upsert_course(cid, c.get("shortname", ""), c.get("fullname", ""))
 
     # 下載教材
