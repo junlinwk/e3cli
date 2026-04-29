@@ -9,6 +9,7 @@ from rich.table import Table
 from e3cli.api.courses import get_enrolled_courses
 from e3cli.api.site import get_site_info
 from e3cli.commands._common import get_client
+from e3cli.course_name import display_with_code
 from e3cli.i18n import t
 from e3cli.semester import format_semester, get_current_semester_code, group_by_semester
 
@@ -53,11 +54,13 @@ def courses(
             title_style="bold green" if is_current else "bold",
         )
         table.add_column(t("courses.col_id"), style="dim", width=8)
-        table.add_column(t("courses.col_code"), style="cyan")
-        table.add_column(t("courses.col_name"), style="bold")
+        table.add_column(t("courses.col_name"))
 
         for c in sem_courses:
-            table.add_row(str(c["id"]), c.get("shortname", ""), c.get("fullname", ""))
+            table.add_row(
+                str(c["id"]),
+                display_with_code(c.get("fullname", ""), c.get("shortname", "")),
+            )
 
         console.print(table)
         console.print()

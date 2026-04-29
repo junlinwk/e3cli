@@ -15,6 +15,7 @@ from e3cli.api.files import download_file
 from e3cli.api.site import get_site_info
 from e3cli.commands._common import get_client, get_db
 from e3cli.config import load_config
+from e3cli.course_name import display_name, display_with_code, migrate_course_dir
 from e3cli.i18n import t
 from e3cli.semester import filter_current_semester, format_semester, fuzzy_match_course, get_current_semester_code
 
@@ -30,11 +31,13 @@ def _interactive_select(course_list: list[dict]) -> list[dict]:
     """互動式選擇要同步的課程。"""
     table = Table(title=t("sync.select_prompt"))
     table.add_column("#", style="cyan", width=4)
-    table.add_column(t("courses.col_code"), style="dim")
-    table.add_column(t("courses.col_name"), style="bold")
+    table.add_column(t("courses.col_name"))
 
     for i, c in enumerate(course_list, 1):
-        table.add_row(str(i), c.get("shortname", ""), c.get("fullname", ""))
+        table.add_row(
+            str(i),
+            display_with_code(c.get("fullname", ""), c.get("shortname", "")),
+        )
 
     console.print(table)
     raw = typer.prompt(t("tui.enter_number"), default="all")
@@ -95,14 +98,14 @@ def sync(
     for c in course_list:
         cid = c["id"]
         courseids.append(cid)
-        course_names[cid] = c.get("fullname", "") or c.get("shortname", "")
+        course_names[cid] = display_name(c.get("fullname", ""), c.get("shortname", ""))
         db.upsert_course(cid, c.get("shortname", ""), c.get("fullname", ""))
 
     # 下載教材
     new_files = 0
     for c in course_list:
         cid = c["id"]
-        cname = _sanitize(c.get("shortname", str(cid)))
+        cname = migrate_course_dir(download_dir, c.get("fullname", ""), c.get("shortname", str(cid)))
 
         try:
             contents = get_course_contents(client, cid)

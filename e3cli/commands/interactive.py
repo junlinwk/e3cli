@@ -25,6 +25,7 @@ from e3cli.api.messages import send_message
 from e3cli.api.site import get_site_info
 from e3cli.commands._common import get_client, get_db
 from e3cli.config import load_config
+from e3cli.course_name import display_name, display_with_code, migrate_course_dir, other_lang_name
 from e3cli.credential import activate_profile, get_active_profile, list_profiles
 from e3cli.formatting import format_duedate, format_submission_status, sort_assignments
 from e3cli.i18n import t
@@ -180,6 +181,16 @@ def _course_list_menu(client, db, cfg, info, courses, show_all=False):
         items = []
         flat_list = []
 
+        def _course_item(c: dict) -> MenuItem:
+            full = c.get("fullname", "")
+            short = c.get("shortname", "")
+            label = display_with_code(full, short, bold_name=False)
+            return MenuItem(
+                label,
+                key=str(c["id"]),
+                description=other_lang_name(full, short),
+            )
+
         if show_all:
             groups = group_by_semester(courses)
             current = get_current_semester_code()
@@ -188,19 +199,11 @@ def _course_list_menu(client, db, cfg, info, courses, show_all=False):
                 marker = " ★" if sem_code == current else ""
                 items.append(MenuItem(f"── {sem_label}{marker} ──", disabled=True))
                 for c in sem_courses:
-                    items.append(MenuItem(
-                        c.get("shortname", ""),
-                        key=str(c["id"]),
-                        description=c.get("fullname", ""),
-                    ))
+                    items.append(_course_item(c))
                     flat_list.append(c)
         else:
             for c in courses:
-                items.append(MenuItem(
-                    c.get("shortname", ""),
-                    key=str(c["id"]),
-                    description=c.get("fullname", ""),
-                ))
+                items.append(_course_item(c))
                 flat_list.append(c)
 
         result = show_menu_fullscreen(items, title=t("tui.select_course"), subtitle=t("tui.search_hint"), selected=last_cursor)
@@ -219,8 +222,10 @@ def _course_list_menu(client, db, cfg, info, courses, show_all=False):
 
 def _course_detail_menu(client, db, cfg, info, course):
     cid = course["id"]
-    cname = course.get("shortname", "")
-    cfull = course.get("fullname", cname)
+    cshort = course.get("shortname", "")
+    cfull_raw = course.get("fullname", "")
+    cdisplay = display_name(cfull_raw, cshort)  # 純課名，用於各 view 的標題
+    cheader = display_with_code(cfull_raw, cshort)  # 課號 + 粗體課名，用於 Panel 抬頭
     last_cursor = 0
 
     while True:
@@ -231,11 +236,11 @@ def _course_detail_menu(client, db, cfg, info, course):
             if len(short_intro) > 120:
                 short_intro = short_intro[:120] + "..."
             console.print(Panel(
-                f"[bold]{cfull}[/bold]  [dim]({cname})[/dim]\n[dim]{short_intro}[/dim]",
+                f"{cheader}\n[dim]{short_intro}[/dim]",
                 border_style="green",
             ))
         else:
-            console.print(Panel(f"[bold]{cfull}[/bold]  [dim]({cname})[/dim]", border_style="green"))
+            console.print(Panel(cheader, border_style="green"))
 
         items = [
             MenuItem(t("course.intro"), key="intro"),
@@ -248,7 +253,7 @@ def _course_detail_menu(client, db, cfg, info, course):
             MenuItem(t("tui.back"), key="back"),
         ]
 
-        result = show_menu_fullscreen(items, title=cfull, search_enabled=False, selected=last_cursor)
+        result = show_menu_fullscreen(items, title=cdisplay, search_enabled=False, selected=last_cursor)
         last_cursor = result.cursor
 
         if result.action in ("back", "quit") or result.key == "back":
@@ -256,24 +261,26 @@ def _course_detail_menu(client, db, cfg, info, course):
         elif result.key == "intro":
             _course_intro_view(course)
         elif result.key == "materials":
-            _materials_view(client, db, cfg, cid, cname)
+            _materials_view(client, db, cfg, course)
         elif result.key == "assignments":
-            _assignments_view(client, db, info, cid, cname)
+            _assignments_view(client, db, info, cid, cdisplay)
         elif result.key == "announcements":
-            _announcements_view(client, cid, cname)
+            _announcements_view(client, cid, cdisplay)
         elif result.key == "members":
-            _members_view(client, info, cid, cname)
+            _members_view(client, info, cid, cdisplay)
         elif result.key == "grades":
             _grades_view(client, info, cid)
         elif result.key == "download":
-            _download_course_all(client, db, cfg, cid, cname)
+            _download_course_all(client, db, cfg, course)
 
 
 # ─── Materials View ──────────────────────────────────────────────────────
 
-def _materials_view(client, db, cfg, cid, cname):
+def _materials_view(client, db, cfg, course):
+    cid = course["id"]
     contents = get_course_contents(client, cid)
     download_dir = cfg.storage.download_dir
+    cdir = migrate_course_dir(download_dir, course.get("fullname", ""), course.get("shortname", str(cid)))
     all_files = []
 
     items = []
@@ -317,13 +324,13 @@ def _materials_view(client, db, cfg, cid, cname):
         count = 0
         for cid, mid, fname, furl, fsize, ftime, section_name in all_files:
             if not db.is_downloaded(cid, mid, fname, ftime):
-                dest = download_dir / _sanitize(cname) / _sanitize(section_name) / fname
+                dest = download_dir / cdir / _sanitize(section_name) / fname
                 download_file(client, furl, dest)
                 db.record_download(cid, mid, fname, furl, fsize, ftime, str(dest), int(time.time()))
                 console.print(f"  {t('tui.downloaded', f=fname)}")
                 count += 1
         if count > 0:
-            console.print(f"[dim]{t('dl.saved_to', path=str(download_dir / _sanitize(cname)))}[/dim]")
+            console.print(f"[dim]{t('dl.saved_to', path=str(download_dir / cdir))}[/dim]")
         _wait_enter()
     elif result.action == "select":
         idx = int(result.key)
@@ -524,7 +531,10 @@ def _assignments_view(client, db, info, cid, cname):
 
 def _all_assignments_view(client, db, info, courses):
     courseids = [c["id"] for c in courses]
-    course_names = {c["id"]: c.get("fullname", "") or c.get("shortname", "") for c in courses}
+    course_names = {
+        c["id"]: display_name(c.get("fullname", ""), c.get("shortname", ""))
+        for c in courses
+    }
 
     if not courseids:
         console.print(f"[yellow]{t('common.no_courses')}[/yellow]")
@@ -773,8 +783,10 @@ def _grades_view(client, info, cid):
 
 # ─── Download All for Course ─────────────────────────────────────────────
 
-def _download_course_all(client, db, cfg, cid, cname):
+def _download_course_all(client, db, cfg, course):
+    cid = course["id"]
     download_dir = cfg.storage.download_dir
+    cdir = migrate_course_dir(download_dir, course.get("fullname", ""), course.get("shortname", str(cid)))
     contents = get_course_contents(client, cid)
     count = 0
 
@@ -791,7 +803,7 @@ def _download_course_all(client, db, cfg, cid, cname):
                     continue
                 if db.is_downloaded(cid, mid, fname, ftime):
                     continue
-                dest = download_dir / _sanitize(cname) / section_name / fname
+                dest = download_dir / cdir / section_name / fname
                 download_file(client, furl, dest)
                 db.record_download(cid, mid, fname, furl, fsize, ftime, str(dest), int(time.time()))
                 console.print(f"  {t('tui.downloaded', f=fname)}")
@@ -801,7 +813,7 @@ def _download_course_all(client, db, cfg, cid, cname):
         console.print(f"  [dim]{t('dl.no_new')}[/dim]")
     else:
         console.print(f"\n[green]{t('dl.done', new=count, skip=0)}[/green]")
-        console.print(f"[dim]{t('dl.saved_to', path=str(download_dir / _sanitize(cname)))}[/dim]")
+        console.print(f"[dim]{t('dl.saved_to', path=str(download_dir / cdir))}[/dim]")
     _wait_enter()
 
 
@@ -810,10 +822,10 @@ def _download_course_all(client, db, cfg, cid, cname):
 def _course_intro_view(course):
     """顯示課程簡介。"""
     console.print()
-    cfull = course.get("fullname", "")
+    header = display_with_code(course.get("fullname", ""), course.get("shortname", ""))
     summary = course.get("summary", "")
 
-    console.print(Panel(f"[bold]{cfull}[/bold]", title=t("course.intro"), border_style="green"))
+    console.print(Panel(header, title=t("course.intro"), border_style="green"))
 
     if summary:
         desc = _strip_html(summary)
@@ -1372,11 +1384,11 @@ def _do_sync_courses(client, db, cfg, courses):
     for c in courses:
         cid = c["id"]
         courseids.append(cid)
-        course_names[cid] = c.get("shortname", "")
+        course_names[cid] = display_name(c.get("fullname", ""), c.get("shortname", ""))
 
     for c in courses:
         cid = c["id"]
-        cname = _sanitize(c.get("shortname", str(cid)))
+        cdir = migrate_course_dir(download_dir, c.get("fullname", ""), c.get("shortname", str(cid)))
         try:
             contents = _get_contents(client, cid)
         except Exception:
@@ -1392,12 +1404,12 @@ def _do_sync_courses(client, db, cfg, courses):
                     ftime = file_info.get("timemodified", 0)
                     if not fname or not furl or db.is_downloaded(cid, mid, fname, ftime):
                         continue
-                    dest = download_dir / cname / section_name / fname
+                    dest = download_dir / cdir / section_name / fname
                     try:
                         download_file(client, furl, dest)
                         db.record_download(cid, mid, fname, furl, fsize, ftime, str(dest), now)
                         new_files += 1
-                        console.print(f"  [green]↓[/green] {cname}/{section_name}/{fname}")
+                        console.print(f"  [green]↓[/green] {cdir}/{section_name}/{fname}")
                     except Exception as e:
                         console.print(f"  [red]✗[/red] {fname}: {e}")
 

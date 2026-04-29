@@ -14,6 +14,7 @@ from e3cli.api.assignments import get_assignments, get_submission_status_text
 from e3cli.api.courses import get_enrolled_courses
 from e3cli.api.site import get_site_info
 from e3cli.commands._common import get_client, get_db
+from e3cli.course_name import display_name
 from e3cli.formatting import format_duedate, format_submission_status, sort_assignments
 from e3cli.i18n import t
 from e3cli.semester import filter_current_semester
@@ -62,7 +63,10 @@ def assignments(
             course_list = filtered
 
     courseids = [c["id"] for c in course_list]
-    course_names = {c["id"]: c.get("fullname", "") or c.get("shortname", "") for c in course_list}
+    course_names = {
+        c["id"]: display_name(c.get("fullname", ""), c.get("shortname", ""))
+        for c in course_list
+    }
 
     if not courseids:
         console.print(f"[yellow]{t('common.no_courses')}[/yellow]")
