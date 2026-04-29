@@ -34,7 +34,7 @@ from e3cli.semester import (
     get_current_semester_code,
     group_by_semester,
 )
-from e3cli.tui_menu import MenuItem, show_menu_fullscreen, wait_for_back
+from e3cli.tui_menu import MenuItem, prompt_with_back, show_menu_fullscreen, wait_for_back
 
 console = Console()
 app = typer.Typer()
@@ -511,9 +511,9 @@ def _assignments_view(client, db, info, cid, cname):
     while True:
         _show_assignments_table(sorted_raw, f"{t('tui.assignments')} — {cname}")
         console.print(f"\n[dim]{t('tui.view_detail')}[/dim]")
-        choice = _prompt()
+        choice = prompt_with_back("> ")
 
-        if choice in ("q", "b", "back", ""):
+        if choice is None or choice in ("q", "b", "back", ""):
             break
         if choice.isdigit():
             idx = int(choice) - 1
@@ -524,7 +524,7 @@ def _assignments_view(client, db, info, cid, cname):
 
 def _all_assignments_view(client, db, info, courses):
     courseids = [c["id"] for c in courses]
-    course_names = {c["id"]: c.get("shortname", "") for c in courses}
+    course_names = {c["id"]: c.get("fullname", "") or c.get("shortname", "") for c in courses}
 
     if not courseids:
         console.print(f"[yellow]{t('common.no_courses')}[/yellow]")
@@ -551,9 +551,9 @@ def _all_assignments_view(client, db, info, courses):
     while True:
         _show_assignments_table(sorted_raw, t("tui.assignments"), show_course=True)
         console.print(f"\n[dim]{t('tui.view_detail')}[/dim]")
-        choice = _prompt()
+        choice = prompt_with_back("> ")
 
-        if choice in ("q", "b", "back", ""):
+        if choice is None or choice in ("q", "b", "back", ""):
             break
         if choice.isdigit():
             idx = int(choice) - 1
@@ -865,9 +865,9 @@ def _announcements_view(client, cid, cname):
 
         console.print(table)
         console.print(f"\n[dim]{t('announce.view_detail')}[/dim]")
-        choice = _prompt()
+        choice = prompt_with_back("> ")
 
-        if choice in ("q", "b", "back", ""):
+        if choice is None or choice in ("q", "b", "back", ""):
             break
 
         if choice.isdigit():
@@ -943,9 +943,9 @@ def _members_view(client, info, cid, cname):
         console.print(f"[dim]{t('members.total', n=len(all_users))}[/dim]")
         console.print(f"\n[dim]{t('members.select_msg')}[/dim]")
 
-        choice = _prompt()
+        choice = prompt_with_back("> ")
 
-        if choice in ("q", "b", "back", ""):
+        if choice is None or choice in ("q", "b", "back", ""):
             break
 
         if choice.isdigit():

@@ -265,6 +265,43 @@ def _render_menu(
     _last_render_lines = len(output)
 
 
+def prompt_with_back(prompt_text: str = "> ") -> str | None:
+    """
+    讀一行輸入，支援左鍵/esc/q 直接返回（不需先清空輸入）。
+    回傳:
+      - 字串：使用者按 Enter 結束輸入（可能為空字串）
+      - None：使用者按 ←、esc、q 或 Ctrl+C → 表示返回
+    支援 backspace 修正打字。
+    """
+    sys.stdout.write(f"\033[1;36m{prompt_text}\033[0m")
+    sys.stdout.flush()
+    buf: list[str] = []
+    while True:
+        key = _read_key()
+        if key in ("left", "esc", "quit"):
+            sys.stdout.write("\r\033[K")
+            sys.stdout.flush()
+            return None
+        if key == "q" and not buf:
+            sys.stdout.write("\r\033[K")
+            sys.stdout.flush()
+            return None
+        if key == "enter":
+            sys.stdout.write("\n")
+            sys.stdout.flush()
+            return "".join(buf)
+        if key == "backspace":
+            if buf:
+                buf.pop()
+                sys.stdout.write("\b \b")
+                sys.stdout.flush()
+            continue
+        if len(key) == 1 and key.isprintable():
+            buf.append(key)
+            sys.stdout.write(key)
+            sys.stdout.flush()
+
+
 def wait_for_back(prompt_text: str = "") -> None:
     """等待使用者按 Enter、← 或 q 返回。支援方向鍵。"""
     if prompt_text:
