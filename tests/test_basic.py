@@ -76,6 +76,40 @@ def test_parse_course_name_no_shortname():
     assert en == "Test"
 
 
+def test_parse_course_name_halfwidth_parens():
+    code, zh, en = parse_course_name(
+        "1142.410024.專題研究(三) Research(III)", "1142.410024"
+    )
+    assert code == "1142.410024"
+    assert zh == "專題研究(三)"
+    assert en == "Research(III)"
+
+
+def test_parse_course_name_fullwidth_parens():
+    code, zh, en = parse_course_name(
+        "1142.410024.專題研究（三） Research(III)", "1142.410024"
+    )
+    assert code == "1142.410024"
+    assert zh == "專題研究（三）"
+    assert en == "Research(III)"
+
+
+def test_parse_course_name_pure_chinese_with_parens():
+    code, zh, en = parse_course_name("1142.410024.專題研究(三)", "1142.410024")
+    assert code == "1142.410024"
+    assert zh == "專題研究(三)"
+    assert en == ""
+
+
+def test_parse_course_name_chinese_with_period_then_english():
+    # 中文後接句號或頓號再接英文（少見但要 robust）
+    code, zh, en = parse_course_name(
+        "1142.999999.資訊安全、密碼學 Information Security", "1142.999999"
+    )
+    assert zh == "資訊安全、密碼學"
+    assert en == "Information Security"
+
+
 def test_display_name_picks_language():
     fullname = "1142.430107.中文名稱 English Name"
     assert display_name(fullname, "1142.430107", lang="zh") == "中文名稱"

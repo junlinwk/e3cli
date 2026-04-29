@@ -61,11 +61,15 @@ def parse_course_name(fullname: str, shortname: str = "") -> tuple[str, str, str
     if last_cjk == -1:
         return code, "", rest.strip()
 
-    after = rest[last_cjk + 1:]
-    sm = re.match(r"^\s+(.*)$", after)
-    if sm:
-        return code, rest[:last_cjk + 1].strip(), sm.group(1).strip()
-    return code, rest.strip(), ""
+    # 從最後一個 CJK 字往後吃掉所有「非空白」字元（半形/全形括號、引號、頓號等
+    # 都算中文段的一部分），直到遇到第一個空白才視為中英分界。
+    boundary = last_cjk + 1
+    while boundary < len(rest) and not rest[boundary].isspace():
+        boundary += 1
+
+    zh = rest[:boundary].strip()
+    en = rest[boundary:].strip()
+    return code, zh, en
 
 
 def display_name(fullname: str, shortname: str = "", lang: str | None = None) -> str:
