@@ -85,12 +85,17 @@ jobs:
                   m = re.match(r'^([A-Za-z0-9]([A-Za-z0-9._-]*[A-Za-z0-9])?)', r)
                   if m:
                       deps.append(m.group(1).lower())
-              sdist_url, sha = "", ""
+              # Prefer pure-Python wheel (py3-none-any) → no compile, much faster brew install.
+              # Fall back to sdist for packages without a universal wheel.
+              wheel_url = wheel_sha = sdist_url = sdist_sha = ""
               for f in data["releases"].get(ver, []):
-                  if f["packagetype"] == "sdist":
-                      sdist_url, sha = f["url"], f["digests"]["sha256"]
-                      break
-              return {"name": pkg_normalized, "deps": deps, "url": sdist_url, "sha256": sha}
+                  if f["packagetype"] == "bdist_wheel" and "py3-none-any" in f["filename"]:
+                      wheel_url, wheel_sha = f["url"], f["digests"]["sha256"]
+                  elif f["packagetype"] == "sdist" and not sdist_url:
+                      sdist_url, sdist_sha = f["url"], f["digests"]["sha256"]
+              url = wheel_url or sdist_url
+              sha = wheel_sha or sdist_sha
+              return {"name": pkg_normalized, "deps": deps, "url": url, "sha256": sha}
 
           # Resolve ALL transitive dependencies
           seen = set()

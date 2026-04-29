@@ -25,7 +25,7 @@ from e3cli.api.messages import send_message
 from e3cli.api.site import get_site_info
 from e3cli.commands._common import get_client, get_db
 from e3cli.config import load_config
-from e3cli.course_name import display_name, display_with_code, migrate_course_dir, other_lang_name
+from e3cli.course_name import display_name, display_with_code, migrate_course_dir
 from e3cli.credential import activate_profile, get_active_profile, list_profiles
 from e3cli.formatting import format_duedate, format_submission_status, sort_assignments
 from e3cli.i18n import t
@@ -188,7 +188,6 @@ def _course_list_menu(client, db, cfg, info, courses, show_all=False):
             return MenuItem(
                 label,
                 key=str(c["id"]),
-                description=other_lang_name(full, short),
             )
 
         if show_all:
