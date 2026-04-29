@@ -20,6 +20,7 @@ from e3cli.commands.profile import app as profile_app
 from e3cli.commands.schedule import app as schedule_app
 from e3cli.commands.setup import app as setup_app
 from e3cli.commands.setup import is_first_run, run_setup_wizard
+from e3cli.commands.skill import app as skill_app
 from e3cli.commands.submit import app as submit_app
 from e3cli.commands.sync import app as sync_app
 from e3cli.i18n import t
@@ -44,6 +45,7 @@ app.add_typer(members_app, name="members", help=t("cli.members"))
 app.add_typer(message_app, name="message", help=t("cli.message"))
 app.add_typer(announcements_cli_app, name="announcements", help=t("cli.announcements"))
 app.add_typer(profile_app, name="profile", help="Manage profiles")
+app.add_typer(skill_app, name="skill", help="Install the e3cli SKILL.md into Claude Code / Codex / Gemini CLI")
 
 
 @app.command()
@@ -56,7 +58,7 @@ _original_app_call = app.__call__
 
 
 def _app_with_first_run(*args, **kwargs):
-    skip_keywords = {"--help", "-h", "version", "setup", "--show-completion", "--install-completion"}
+    skip_keywords = {"--help", "-h", "version", "setup", "skill", "--show-completion", "--install-completion"}
     if (
         is_first_run()
         and sys.stdin.isatty()

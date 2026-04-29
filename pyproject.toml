@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "e3cli"
-version = "0.8.2"
+version = "0.8.3"
 description = "NYCU E3 Moodle automation CLI — sync courses, download materials, submit assignments."
 readme = "README.md"
 license = "MIT"
@@ -42,6 +42,9 @@ dev = [
 
 [project.scripts]
 e3cli = "e3cli.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["e3cli"]
 
 [project.urls]
 Homepage = "https://github.com/junlinwk/e3cli"
