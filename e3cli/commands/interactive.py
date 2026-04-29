@@ -336,7 +336,7 @@ def _materials_view(client, db, cfg, course):
         idx = int(result.key)
         if 0 <= idx < len(all_files):
             cid, mid, fname, furl, fsize, ftime, section_name = all_files[idx]
-            dest = download_dir / _sanitize(cname) / _sanitize(section_name) / fname
+            dest = download_dir / cdir / _sanitize(section_name) / fname
             download_file(client, furl, dest)
             db.record_download(cid, mid, fname, furl, fsize, ftime, str(dest), int(time.time()))
             console.print(f"  {t('tui.downloaded', f=fname)}")
