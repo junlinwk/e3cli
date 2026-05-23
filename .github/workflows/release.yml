@@ -156,10 +156,18 @@ jobs:
                   '  end',
               ]
 
+          # NOTE on def install: when the main url is a wheel, the default
+          # `virtualenv_install_with_resources` fails because brew extracts the
+          # .whl into a directory and then pip-installs that directory — but a
+          # wheel's contents have no pyproject.toml/setup.py at the root, so pip
+          # rejects it. Workaround: install the un-extracted wheel file directly
+          # via `cached_download`, which returns the .whl path in HOMEBREW_CACHE.
           lines += [
               '',
               '  def install',
-              '    virtualenv_install_with_resources',
+              '    venv = virtualenv_create(libexec, "python3.12")',
+              '    venv.pip_install resources',
+              '    venv.pip_install_and_link cached_download',
               '  end',
               '',
               '  test do',
