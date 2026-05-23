@@ -18,33 +18,38 @@ e3cli is a CLI tool for interacting with NYCU's E3 Moodle platform. The agent ca
 
 ## Workflow
 
-### Step 1: Check for new assignments
+### Step 1: Check for new assignments (live, no sync)
+
+`assignments` hits the live Moodle API — do NOT prefix it with `e3cli sync`.
 
 ```bash
-# Sync current semester (downloads new materials + checks assignments)
-e3cli sync
-
 # List assignments with deadlines
 e3cli assignments
 
 # Show only assignments due within 7 days
 e3cli assignments --due-soon 7
+
+# Full description + attachment URLs for one assignment (also live)
+e3cli assignments --detail <ID>
 ```
 
-### Step 2: Read assignment details
+### Step 2: Pull supporting materials — only what the user asked about
 
-Assignments are synced to the local SQLite database. Course materials (including assignment PDFs) are downloaded to `~/e3-downloads/`.
+Course materials may include large media (mp4 lectures, recordings). Scope downloads to the specific course the user mentioned. A blanket `e3cli sync` / `e3cli download` will pull everything for every course and waste bandwidth/time.
 
 ```bash
-# Download materials for a specific course
+# Materials for one course (download only)
 e3cli download --course "OS"
 
-# Find downloaded assignment files
-find ~/e3-downloads/ -name "*.pdf" -newer ~/.e3cli/data/e3cli.db
+# Materials + assignment status refresh for one course
+e3cli sync --course "OS"
+
+# Find downloaded files for that course
+find ~/e3-downloads/<course>/ -type f
 ```
 
 The agent should:
-- Read the assignment PDF/description
+- Read the assignment PDF/description (use `--detail` and the attachment URLs)
 - Check `~/e3-downloads/<course>/` for relevant lecture materials
 - Understand the requirements before starting work
 

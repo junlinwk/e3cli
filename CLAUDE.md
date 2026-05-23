@@ -66,13 +66,12 @@ e3cli skill uninstall              # remove
 
 ## Workflow: When a New Assignment is Detected
 
-1. `e3cli sync` — pull latest materials and assignment status
-2. `e3cli assignments` — see what's new/urgent (sorted by deadline)
-3. `e3cli assignments --detail <ID>` — read the full description and check attachments
-4. Downloaded materials are in the download directory (check `e3cli sync` output for path)
-5. Work on the assignment
-6. `e3cli submit <ID> <file>` — submit when ready
-7. **Always confirm with the user before submitting**
+1. `e3cli assignments` — see what's new/urgent (sorted by deadline). **No sync needed** — this hits the live API.
+2. `e3cli assignments --detail <ID>` — read the full description and check attachments. Also live.
+3. **Only if** the user mentions / asks about a specific course's materials: `e3cli download --course "<name>"` or `e3cli sync --course "<name>"`. Avoid blanket `e3cli sync` / `e3cli download` — they pull every file including large media (mp4 lectures, recordings).
+4. Work on the assignment
+5. `e3cli submit <ID> <file>` — submit when ready
+6. **Always confirm with the user before submitting**
 
 ## Reading Assignment Details
 

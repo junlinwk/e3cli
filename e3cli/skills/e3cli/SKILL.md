@@ -24,33 +24,34 @@ e3cli courses      # if this errors with "auth"/"token" → user must run: e3cli
 
 ## Core workflow
 
-### 1. Sync first
-Always start with sync so subsequent reads are fresh:
-```bash
-e3cli sync
-```
-The output prints the materials download directory — remember it for step 4.
-
-### 2. Find the right assignment
+### 1. Find the right assignment (no sync needed)
+List and detail commands hit the live Moodle API directly — they do **not** require a prior `e3cli sync`.
 ```bash
 e3cli assignments                  # current semester, sorted by deadline
 e3cli assignments --due-soon 7     # due within 7 days only
 ```
 Each row shows an assignment ID. You need that ID for everything that follows.
 
-### 3. Read the full description
+### 2. Read the full description (no sync needed)
 ```bash
 e3cli assignments --detail <ID>
 ```
 Prints the full description (HTML→text), attachment URLs, submission status, and due date. **Always read this before working** — the one-line summary in `e3cli assignments` is not enough to write a correct submission.
 
-### 4. Pull supporting materials
+### 3. Pull supporting materials — **targeted only**
+Materials may include large media files (mp4 lectures, recordings, slide PDFs). **Never run a blanket sync** unless the user explicitly asks for "sync everything" / "下載全部". Always scope to what the user mentioned.
 ```bash
-e3cli download                     # all current-semester materials
-e3cli download --course "OS"       # specific course (fuzzy match on name)
-```
+# ✓ User mentioned course "OS" or a specific assignment in that course
+e3cli download --course "OS"       # download-only, single course (fuzzy match)
+e3cli sync --course "OS"           # download + refresh assignment status, single course
 
-### 5. Submit (only after explicit user confirmation)
+# ✗ Avoid these unless user explicitly says "all" / "everything" / "全部"
+e3cli sync                         # blanket: every current-semester course
+e3cli download                     # blanket download
+```
+The output prints the download directory — read the relevant files from there.
+
+### 4. Submit (only after explicit user confirmation)
 ```bash
 e3cli submit <ID> <file>
 e3cli submit <ID> <file1> <file2>          # multiple files
