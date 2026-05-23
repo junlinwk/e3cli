@@ -156,18 +156,24 @@ jobs:
                   '  end',
               ]
 
-          # NOTE on def install: when the main url is a wheel, the default
-          # `virtualenv_install_with_resources` fails because brew extracts the
-          # .whl into a directory and then pip-installs that directory — but a
-          # wheel's contents have no pyproject.toml/setup.py at the root, so pip
-          # rejects it. Workaround: install the un-extracted wheel file directly
-          # via `cached_download`, which returns the .whl path in HOMEBREW_CACHE.
+          # NOTE on def install: when the main url is a wheel we can't use the
+          # default `virtualenv_install_with_resources`:
+          #  1. brew extracts the .whl (it's a zip) into a directory, but the
+          #     extracted dir has no pyproject.toml/setup.py at the root, so pip
+          #     refuses to install it.
+          #  2. brew caches the downloaded file with a SHA prefix
+          #     (<sha>--e3cli-X.Y.Z-py3-none-any.whl), which has too many `-`
+          #     parts for pip's wheel filename parser to accept.
+          # Fix: copy `cached_download` to a clean wheel filename in buildpath,
+          # then pip_install_and_link that file directly (no extraction needed).
           lines += [
               '',
               '  def install',
               '    venv = virtualenv_create(libexec, "python3.12")',
               '    venv.pip_install resources',
-              '    venv.pip_install_and_link cached_download',
+              '    wheel = buildpath/"e3cli-#{version}-py3-none-any.whl"',
+              '    cp cached_download, wheel',
+              '    venv.pip_install_and_link wheel',
               '  end',
               '',
               '  test do',
