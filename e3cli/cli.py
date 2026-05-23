@@ -58,15 +58,16 @@ _original_app_call = app.__call__
 
 
 def _app_with_first_run(*args, **kwargs):
-    skip_keywords = {"--help", "-h", "version", "setup", "skill", "--show-completion", "--install-completion"}
+    # 只保留 shell completion 相關 — 這兩個是 shell 啟動時 typer 自動呼叫的，
+    # 若擋住會在開新 terminal 時 hang 在互動式 wizard。
+    skip_keywords = {"--show-completion", "--install-completion"}
     if (
         is_first_run()
         and sys.stdin.isatty()
         and not any(arg in skip_keywords for arg in sys.argv[1:])
     ):
         run_setup_wizard()
-        if len(sys.argv) <= 1:
-            return
+        return
     return _original_app_call(*args, **kwargs)
 
 

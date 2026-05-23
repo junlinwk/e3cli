@@ -18,7 +18,7 @@
   <a href="#指令說明">指令</a> &bull;
   <a href="#互動模式">互動模式</a> &bull;
   <a href="#安全性">安全性</a> &bull;
-  <a href="#claude-code-整合">Claude Code</a> &bull;
+  <a href="#ai-agent-整合">AI Agent</a> &bull;
   <a href="./README.md">English</a>
 </p>
 
@@ -44,6 +44,7 @@
 - **互動介面** — 完整方向鍵互動介面 (`e3cli i`)
 - **雙語** — 完整中文/英文支援
 - **多校支援** — 支援任何 Moodle 平台（可設定學期格式）
+- **AI Agent Skill** — 內建 SKILL.md，可一鍵安裝到 Claude Code / Codex CLI / Gemini CLI / Antigravity CLI (`agy`)（`e3cli skill install`）
 
 ## 支援平台
 
@@ -101,6 +102,8 @@ pip install -e ".[dev]"
 ---
 
 ## 快速開始
+
+> 首次執行時，**任何** `e3cli <指令>` 都會自動啟動互動式設定引導（語言、Moodle 網址、學期格式、別名、登入、AI agent skill）。設定完後請再執行一次原本的指令。
 
 ```bash
 # 1. 登入（首次使用會啟動互動式引導）
@@ -263,11 +266,28 @@ e3cli profile use ntu     # → 連線 NTU COOL
 
 ### `e3cli setup`
 
-重新執行互動式設定引導（語言、Moodle 網址、學期格式、別名、下載目錄、登入）。
+重新執行互動式設定引導。共 6 步驟：Moodle 網址 → 學期格式 → 下載目錄 → 指令別名 → 登入 → AI agent skill 安裝。
 
 ```bash
 e3cli setup
 ```
+
+> 首次執行任何 `e3cli` 指令時（找不到 config 檔），會自動跑這個 wizard。
+
+### `e3cli skill`
+
+安裝內建的 SKILL.md，讓 AI 編程助手（Claude Code / Codex CLI / Gemini CLI / Antigravity CLI `agy`）知道如何正確使用 e3cli — 何時 sync、如何讀取作業完整描述、提交前必先詢問等。
+
+```bash
+e3cli skill status                # 列出偵測到 / 已安裝的 agent
+e3cli skill install               # 自動偵測 ~/.claude / ~/.codex / ~/.gemini / antigravity-cli
+e3cli skill install -t claude     # 安裝到特定目標 (claude/codex/gemini/antigravity)
+e3cli skill install -t all        # 安裝到所有已知 agent（即使未偵測到）
+e3cli skill install --force       # 覆寫既有的
+e3cli skill uninstall             # 從所有 agent 目錄移除
+```
+
+setup wizard 的 Step 6 會自動詢問是否安裝；事後跑 `e3cli skill install` 效果相同。
 
 ### `e3cli version`
 
@@ -417,18 +437,31 @@ e3cli 使用 **PBKDF2-HMAC-SHA256** 金鑰衍生搭配完整性驗證來保護�
 
 ---
 
-## Claude Code 整合
+## AI Agent 整合
 
-本專案提供 `CLAUDE.md` 文件，教 [Claude Code](https://claude.ai/code) 如何使用 e3cli 作為自動化助手。當 Claude Code 在此專案目錄下運行時，它可以：
+e3cli 內建一份 `SKILL.md`，教 AI 編程助手 — [Claude Code](https://claude.ai/code)、OpenAI Codex CLI、Google Gemini CLI、以及 Google Antigravity CLI (`agy`，Gemini CLI 的繼任者) — 如何正確使用：先 sync、開工前先讀完整作業描述、提交前必先詢問、不讀帳密檔等。
+
+### 安裝 skill
+
+setup wizard 的 Step 6 會自動詢問。事後手動安裝：
+
+```bash
+e3cli skill install               # 自動偵測 ~/.claude / ~/.codex / ~/.gemini / antigravity-cli
+e3cli skill status                # 查看偵測 / 安裝狀態
+```
+
+裝好後，agent 偵測到 Moodle 相關需求（"Moodle"、"NYCU"、"E3"、"作業"、"繳交" …）就會自動依照內建流程操作。
+
+### Agent 能做的事
 
 - 同步並檢查新作業 (`e3cli sync`)
 - 讀取作業描述與已下載的教材
 - 協助完成作業（需人工審查）
 - 提交完成的作業 (`e3cli submit`)
 
-詳見 [`CLAUDE.md`](./CLAUDE.md) 和 [`e3cli/agent_prompt.md`](./e3cli/agent_prompt.md)。
+詳見 [`e3cli/skills/e3cli/SKILL.md`](./e3cli/skills/e3cli/SKILL.md)、[`CLAUDE.md`](./CLAUDE.md) 與 [`e3cli/agent_prompt.md`](./e3cli/agent_prompt.md)。
 
-> **注意：** Claude Code 在提交作業前一定會先詢問確認。
+> **注意：** AI agent 在提交作業前一定會先詢問確認。
 
 ---
 

@@ -18,7 +18,7 @@
   <a href="#commands">Commands</a> &bull;
   <a href="#interactive-mode">Interactive</a> &bull;
   <a href="#security">Security</a> &bull;
-  <a href="#claude-code-integration">Claude Code</a> &bull;
+  <a href="#ai-agent-integration">AI Agents</a> &bull;
   <a href="./README_zh-TW.md">繁體中文</a>
 </p>
 
@@ -44,6 +44,7 @@
 - **Interactive TUI** — Full arrow-key interactive interface (`e3cli i`)
 - **Bilingual** — Full Chinese/English support
 - **Multi-school** — Works with any Moodle instance (configurable semester format)
+- **AI Agent Skill** — Bundled SKILL.md installable into Claude Code / Codex CLI / Gemini CLI / Antigravity CLI (`agy`) (`e3cli skill install`)
 
 ## Supported Platforms
 
@@ -101,6 +102,8 @@ pip install -e ".[dev]"
 ---
 
 ## Quick Start
+
+> On first run, **any** `e3cli <something>` command will launch the interactive setup wizard (language, Moodle URL, semester format, alias, login, AI agent skill). After setup, re-run your original command.
 
 ```bash
 # 1. Login (first time — interactive setup wizard will guide you)
@@ -263,11 +266,28 @@ e3cli profile use ntu     # → connects to NTU COOL
 
 ### `e3cli setup`
 
-Re-run the interactive setup wizard (language, Moodle URL, semester format, alias, download directory, login).
+Re-run the interactive setup wizard. Six steps: Moodle URL → semester format → download directory → command alias → login → AI agent skill install.
 
 ```bash
 e3cli setup
 ```
+
+> The setup wizard runs automatically the first time any `e3cli` command is invoked (config file missing).
+
+### `e3cli skill`
+
+Install the bundled SKILL.md so AI coding agents (Claude Code / Codex CLI / Gemini CLI / Antigravity CLI (`agy`)) know how to use e3cli — when to sync, how to read full assignment details, when to ask before submitting.
+
+```bash
+e3cli skill status                # show which agents are detected + installed
+e3cli skill install               # auto-detect ~/.claude / ~/.codex / ~/.gemini / antigravity-cli
+e3cli skill install -t claude     # install for a specific target (claude/codex/gemini/antigravity)
+e3cli skill install -t all        # install for all known agents (even if undetected)
+e3cli skill install --force       # overwrite existing
+e3cli skill uninstall             # remove from all agent dirs
+```
+
+The setup wizard offers this as Step 6; running `e3cli skill install` later is the same operation.
 
 ### `e3cli version`
 
@@ -417,18 +437,31 @@ e3cli uses **PBKDF2-HMAC-SHA256** key derivation with integrity verification to 
 
 ---
 
-## Claude Code Integration
+## AI Agent Integration
 
-This project includes a `CLAUDE.md` file that teaches [Claude Code](https://claude.ai/code) how to use e3cli as an automated assistant. When Claude Code is invoked in this project directory, it can:
+e3cli ships with a `SKILL.md` that teaches AI coding agents — [Claude Code](https://claude.ai/code), OpenAI Codex CLI, Google Gemini CLI, and Google Antigravity CLI (`agy`, Gemini CLI's successor) — how to use it correctly: sync first, read full assignment details before working, ask before submitting, never read credential files, etc.
+
+### Install the skill
+
+The setup wizard's Step 6 offers this automatically. To install manually:
+
+```bash
+e3cli skill install               # auto-detects ~/.claude / ~/.codex / ~/.gemini / ~/.gemini/antigravity-cli
+e3cli skill status                # see what's detected and installed
+```
+
+Once installed, the agent recognises Moodle-related requests ("Moodle", "NYCU", "E3", "assignment", "作業", "繳交", …) and follows the bundled workflow.
+
+### What the agent can do
 
 - Sync and check for new assignments (`e3cli sync`)
 - Read assignment descriptions and downloaded materials
 - Help complete assignments (with human oversight)
 - Submit completed work (`e3cli submit`)
 
-See [`CLAUDE.md`](./CLAUDE.md) and [`e3cli/agent_prompt.md`](./e3cli/agent_prompt.md) for the full agent automation guide.
+See [`e3cli/skills/e3cli/SKILL.md`](./e3cli/skills/e3cli/SKILL.md), [`CLAUDE.md`](./CLAUDE.md), and [`e3cli/agent_prompt.md`](./e3cli/agent_prompt.md) for the full agent automation guide.
 
-> **Note:** Claude Code will always ask for confirmation before submitting assignments.
+> **Note:** AI agents will always ask for confirmation before submitting assignments.
 
 ---
 

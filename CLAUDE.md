@@ -54,7 +54,15 @@ e3cli i
 
 # Token expired?
 e3cli login --refresh
+
+# AI agent skill (install SKILL.md into Claude Code / Codex / Gemini / Antigravity CLI)
+e3cli skill status                 # check what's detected / installed
+e3cli skill install                # auto-install for detected agents
+e3cli skill install -t claude      # specific target (claude/codex/gemini/antigravity)
+e3cli skill uninstall              # remove
 ```
+
+> **First run:** if `~/.e3cli/config.toml` doesn't exist, ANY `e3cli <cmd>` launches the interactive setup wizard. The wizard is 6 steps (Moodle URL → semester format → download dir → alias → login → AI agent skill install). After completion, re-run the original command.
 
 ## Workflow: When a New Assignment is Detected
 
@@ -99,6 +107,7 @@ e3cli download --course "artificial intelligence"
 3. **Check deadlines first** — prioritize urgent assignments
 4. **Token expiry** — if commands fail with auth errors, run `e3cli login --refresh`
 5. **Don't read credential files** — use CLI commands, not direct file access
+6. **First-run wizard hangs the agent** — if a command opens an interactive setup wizard (config missing) or `login --refresh` prompt, STOP and tell the user to run `e3cli setup` / `e3cli login --refresh` themselves in their terminal. Both are interactive and will hang an agent session.
 
 ## Data Locations
 

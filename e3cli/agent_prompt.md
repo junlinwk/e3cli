@@ -14,6 +14,7 @@ e3cli is a CLI tool for interacting with NYCU's E3 Moodle platform. The agent ca
 
 - e3cli must be installed and logged in (`e3cli login --save`)
 - The agent must have shell access to run `e3cli` commands
+- **First-run safety:** if `~/.e3cli/config.toml` does not exist, any `e3cli <cmd>` will launch an interactive setup wizard that **will hang an agent session**. Probe via `test -f ~/.e3cli/config.toml` before running real commands; if missing, tell the user to run `e3cli setup` themselves in their own terminal.
 
 ## Workflow
 
@@ -120,8 +121,11 @@ e3cli sync --quiet
 | `e3cli download --course "X"` | Download course X materials |
 | `e3cli download --all` | Download all materials |
 | `e3cli submit ID file.pdf` | Submit assignment |
-| `e3cli i` | Interactive mode |
-| `e3cli login --refresh` | Refresh expired token |
+| `e3cli i` | Interactive mode (DO NOT run from agent — TUI hangs) |
+| `e3cli login --refresh` | Refresh expired token (interactive — instruct user) |
+| `e3cli setup` | First-run wizard (interactive — instruct user) |
+| `e3cli skill install` | Install bundled SKILL.md into Claude / Codex / Gemini / Antigravity (`agy`) |
+| `e3cli skill status` | List which AI agent dirs are detected + installed |
 
 ## Data Locations
 

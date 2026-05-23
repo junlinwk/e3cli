@@ -39,6 +39,17 @@ def _targets() -> list[Target]:
             detect_dir=home / ".codex",
             skill_path=home / ".codex" / "skills" / SKILL_NAME / "SKILL.md",
         ),
+        # Antigravity CLI (`agy`) — Gemini CLI's successor. Reads skills from
+        # ~/.gemini/antigravity-cli/skills/. Standard SKILL.md format (our
+        # bundled file already has the YAML frontmatter agy expects).
+        Target(
+            name="antigravity",
+            detect_dir=home / ".gemini" / "antigravity-cli",
+            skill_path=home / ".gemini" / "antigravity-cli" / "skills" / SKILL_NAME / "SKILL.md",
+        ),
+        # Legacy Gemini CLI extension format (kept for backward compat with
+        # users still on the pre-agy Gemini CLI). Uses ~/.gemini/extensions/
+        # with a gemini-extension.json descriptor.
         Target(
             name="gemini",
             detect_dir=home / ".gemini",
@@ -68,7 +79,14 @@ def _bundled_skill_text() -> str:
 
 
 def _detected(targets: list[Target]) -> list[Target]:
-    return [t for t in targets if t.detect_dir.is_dir()]
+    found = [t for t in targets if t.detect_dir.is_dir()]
+    # 若同時偵測到 antigravity (agy) 和 legacy gemini，自動跳過 legacy gemini。
+    # antigravity 的 detect_dir (~/.gemini/antigravity-cli) 是 gemini 的子目錄，
+    # 沒這個排除的話會在新 agy 用戶機器上重複裝。
+    names = {t.name for t in found}
+    if "antigravity" in names and "gemini" in names:
+        found = [t for t in found if t.name != "gemini"]
+    return found
 
 
 def _install_one(target: Target, content: str, force: bool) -> tuple[bool, str]:

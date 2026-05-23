@@ -11,14 +11,16 @@ The same `e3cli` binary is invoked from the shell — this skill only tells you 
 
 ## Prerequisites — verify first
 
-Before doing real work, confirm the tool is installed and authenticated:
+Before doing real work, confirm the tool is installed, configured, and authenticated:
 
 ```bash
+test -f ~/.e3cli/config.toml && echo "configured" || echo "needs setup"
 e3cli --version    # is it installed?
 e3cli courses      # if this errors with "auth"/"token" → user must run: e3cli login --refresh
 ```
 
-If auth fails, **tell the user to run the login command themselves** — it is interactive and will hang if you run it. Do not attempt to read `~/.e3cli/credentials.enc`, `~/.e3cli/key`, or `~/.e3cli/token`.
+- If config is missing → **STOP**. Any `e3cli <cmd>` will launch an interactive first-run setup wizard that hangs the agent. Tell the user to run `e3cli setup` themselves in their terminal.
+- If auth fails → **tell the user to run the login command themselves** — it is interactive and will hang if you run it. Do not attempt to read `~/.e3cli/credentials.enc`, `~/.e3cli/key`, or `~/.e3cli/token`.
 
 ## Core workflow
 
@@ -80,7 +82,7 @@ e3cli login --profile <name> --url <moodle-url> --save         # add a new schoo
 3. **Prioritize by deadline.** When the user vaguely asks "what should I do", run `e3cli assignments --due-soon 7` first.
 4. **Never read credential files.** `~/.e3cli/credentials.enc`, `~/.e3cli/key`, `~/.e3cli/token` are encrypted/sensitive. Use CLI commands instead.
 5. **Don't run `e3cli i`** (interactive TUI). It needs a real terminal and will hang the agent.
-6. **Don't run `e3cli login` or `e3cli login --refresh` yourself.** They are interactive — instruct the user to run them.
+6. **Don't run `e3cli login`, `e3cli login --refresh`, or `e3cli setup` yourself.** They are interactive — instruct the user to run them.
 
 ## Data locations (reference)
 

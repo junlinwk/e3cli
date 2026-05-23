@@ -176,7 +176,7 @@ def run_setup_wizard() -> None:
     console.print()
 
     # Step 1: Moodle URL
-    console.print(f"[bold cyan]Step 1/5[/bold cyan] — {t('setup.step_url')}")
+    console.print(f"[bold cyan]Step 1/6[/bold cyan] — {t('setup.step_url')}")
     if lang == "zh":
         console.print("[dim]輸入你的 Moodle 網址。支援任何學校的 Moodle 平台。[/dim]")
     else:
@@ -212,12 +212,12 @@ def run_setup_wizard() -> None:
     console.print()
 
     # Step 2: Semester format
-    console.print("[bold cyan]Step 2/5[/bold cyan] — ", end="")
+    console.print("[bold cyan]Step 2/6[/bold cyan] — ", end="")
     sem_format = _choose_semester_format(lang)
     console.print()
 
     # Step 3: Download directory
-    console.print(f"[bold cyan]Step 3/5[/bold cyan] — {t('setup.step_dir')}")
+    console.print(f"[bold cyan]Step 3/6[/bold cyan] — {t('setup.step_dir')}")
     console.print(f"[dim]{t('setup.step_dir_hint')}[/dim]")
     default_dir = os.path.expanduser("~/e3-downloads")
     download_dir = typer.prompt(
@@ -228,7 +228,7 @@ def run_setup_wizard() -> None:
     console.print()
 
     # Step 4: Alias
-    console.print("[bold cyan]Step 4/5[/bold cyan] — ", end="")
+    console.print("[bold cyan]Step 4/6[/bold cyan] — ", end="")
     alias = _setup_alias(lang)
     console.print()
 
@@ -255,7 +255,7 @@ alias = "{alias}"
     console.print()
 
     # Step 5: Login
-    console.print(f"[bold cyan]Step 5/5[/bold cyan] — {t('setup.step_login')}")
+    console.print(f"[bold cyan]Step 5/6[/bold cyan] — {t('setup.step_login')}")
     want_login = typer.confirm(t("setup.want_login"), default=True)
 
     if want_login:
@@ -296,12 +296,66 @@ alias = "{alias}"
             console.print(f"[dim]  {t('setup.login_fail_hint')}[/dim]")
     console.print()
 
+    # Step 6: AI agent skill
+    console.print("[bold cyan]Step 6/6[/bold cyan] — ", end="")
+    _offer_skill_install(lang)
+    console.print()
+
     # Done
     console.print(Panel(
         f"[bold green]{t('setup.done_title')}[/bold green]\n\n{t('setup.done_body')}",
         title="[bold]Ready![/bold]",
         border_style="green",
     ))
+
+
+def _offer_skill_install(lang: str) -> None:
+    """偵測 ~/.claude / ~/.codex / ~/.gemini，有的話問要不要安裝 e3cli skill。"""
+    from e3cli.commands.skill import (
+        _bundled_skill_text,
+        _detected,
+        _install_one,
+        _targets,
+    )
+
+    if lang == "zh":
+        console.print("[bold cyan]AI Agent Skill[/bold cyan]")
+        console.print(
+            "[dim]安裝 SKILL.md 讓 Claude Code / Codex / Gemini CLI 知道如何使用 e3cli[/dim]"
+        )
+    else:
+        console.print("[bold cyan]AI Agent Skill[/bold cyan]")
+        console.print(
+            "[dim]Install SKILL.md so Claude Code / Codex / Gemini CLI know how to use e3cli[/dim]"
+        )
+
+    detected = _detected(_targets())
+    if not detected:
+        if lang == "zh":
+            console.print("[dim]  未偵測到 ~/.claude、~/.codex、~/.gemini — 跳過[/dim]")
+            console.print(
+                "[dim]  日後可執行 [cyan]e3cli skill install[/cyan] 安裝[/dim]"
+            )
+        else:
+            console.print("[dim]  No ~/.claude, ~/.codex, ~/.gemini detected — skipping[/dim]")
+            console.print(
+                "[dim]  Later run [cyan]e3cli skill install[/cyan] to install[/dim]"
+            )
+        return
+
+    names = ", ".join(tg.name for tg in detected)
+    if lang == "zh":
+        prompt = f"  偵測到 {names}，要安裝 e3cli skill 嗎？"
+    else:
+        prompt = f"  Detected: {names}. Install e3cli skill?"
+    if not typer.confirm(prompt, default=True):
+        return
+
+    content = _bundled_skill_text()
+    for tg in detected:
+        ok, msg = _install_one(tg, content, force=False)
+        marker = "[green]  ✓[/green]" if ok else "[yellow]  ·[/yellow]"
+        console.print(f"{marker} [bold]{tg.name}[/bold]: {msg}")
 
 
 @app.callback(invoke_without_command=True)
