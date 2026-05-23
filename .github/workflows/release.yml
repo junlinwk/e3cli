@@ -41,16 +41,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Calculate tarball sha256
-        id: sha
-        run: |
-          TARBALL_URL="https://github.com/${{ github.repository }}/archive/refs/tags/${{ github.ref_name }}.tar.gz"
-          echo "url=${TARBALL_URL}" >> "$GITHUB_OUTPUT"
-          SHA=$(curl -sL "${TARBALL_URL}" | sha256sum | cut -d' ' -f1)
-          echo "sha256=${SHA}" >> "$GITHUB_OUTPUT"
-          echo "Tarball: ${TARBALL_URL}"
-          echo "SHA256:  ${SHA}"
-
       - name: Clone homebrew tap
         uses: actions/checkout@v4
         with:
@@ -64,29 +54,32 @@ jobs:
 
       - name: Generate formula with all transitive dependencies
         run: |
-          python3 - "${{ github.repository }}" "${{ steps.sha.outputs.url }}" "${{ steps.sha.outputs.sha256 }}" << 'PYSCRIPT'
-          import json, re, sys, urllib.request
+          python3 - "${{ github.repository }}" "${{ github.ref_name }}" << 'PYSCRIPT'
+          import json, re, sys, time, urllib.request
 
-          repo, tarball_url, tarball_sha = sys.argv[1], sys.argv[2], sys.argv[3]
+          repo, ref_name = sys.argv[1], sys.argv[2]
+          e3cli_version = ref_name.lstrip("v")
 
-          def get_info(pkg):
+          def get_info(pkg, version=None):
+              """Fetch package info from PyPI. If version is given, look up that specific
+              release's files; otherwise use the latest. Returns None if the version is
+              not yet indexed or no installable file exists."""
               pkg_normalized = re.sub(r'[-_.]+', '-', pkg).lower()
               try:
                   data = json.loads(urllib.request.urlopen(f"https://pypi.org/pypi/{pkg_normalized}/json").read())
               except Exception:
                   return None
-              ver = data["info"]["version"]
+              ver = version or data["info"]["version"]
               requires = data["info"].get("requires_dist") or []
               deps = []
               for r in requires:
                   if "extra ==" in r:
                       continue
-                  # Extract package name (before any version specifier or marker)
                   m = re.match(r'^([A-Za-z0-9]([A-Za-z0-9._-]*[A-Za-z0-9])?)', r)
                   if m:
                       deps.append(m.group(1).lower())
-              # Prefer pure-Python wheel (py3-none-any) → no compile, much faster brew install.
-              # Fall back to sdist for packages without a universal wheel.
+              # Prefer pure-Python wheel (py3-none-any) → no compile, no build-isolation,
+              # much faster brew install. Fall back to sdist if no universal wheel exists.
               wheel_url = wheel_sha = sdist_url = sdist_sha = ""
               for f in data["releases"].get(ver, []):
                   if f["packagetype"] == "bdist_wheel" and "py3-none-any" in f["filename"]:
@@ -95,7 +88,27 @@ jobs:
                       sdist_url, sdist_sha = f["url"], f["digests"]["sha256"]
               url = wheel_url or sdist_url
               sha = wheel_sha or sdist_sha
-              return {"name": pkg_normalized, "deps": deps, "url": url, "sha256": sha}
+              if not url:
+                  return None
+              return {
+                  "name": pkg_normalized, "deps": deps,
+                  "url": url, "sha256": sha,
+                  "has_wheel": bool(wheel_url),
+              }
+
+          # Resolve e3cli itself from PyPI (the just-uploaded version). Retry until the
+          # wheel appears — PyPI's JSON API may lag a few seconds after twine upload.
+          self_info = None
+          for attempt in range(12):  # 12 × 5s = 60s budget
+              self_info = get_info("e3cli", version=e3cli_version)
+              if self_info and self_info["has_wheel"]:
+                  break
+              print(f"PyPI wheel for e3cli {e3cli_version} not ready (attempt {attempt + 1}/12)…", file=sys.stderr)
+              time.sleep(5)
+          if not self_info:
+              sys.exit(f"FATAL: e3cli {e3cli_version} not found on PyPI after retries")
+          if not self_info["has_wheel"]:
+              print(f"WARNING: no wheel for e3cli {e3cli_version}; formula will use sdist and be slow", file=sys.stderr)
 
           # Resolve ALL transitive dependencies
           seen = set()
@@ -119,15 +132,16 @@ jobs:
                   if dk not in seen:
                       queue.append(d)
 
-          # Build formula
+          # Build formula — main package URL points to PyPI wheel (NOT GitHub source
+          # tarball). This avoids brew triggering pip's build-isolation flow on install.
           lines = [
               'class E3cli < Formula',
               '  include Language::Python::Virtualenv',
               '',
               '  desc "NYCU E3 Moodle automation CLI — sync courses, download materials, submit assignments"',
               f'  homepage "https://github.com/{repo}"',
-              f'  url "{tarball_url}"',
-              f'  sha256 "{tarball_sha}"',
+              f'  url "{self_info["url"]}"',
+              f'  sha256 "{self_info["sha256"]}"',
               '  license "MIT"',
               '',
               '  depends_on "python@3.12"',
