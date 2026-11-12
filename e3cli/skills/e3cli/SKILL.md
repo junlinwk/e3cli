@@ -35,8 +35,11 @@ Each row shows an assignment ID. You need that ID for everything that follows.
 ### 2. Read the full description (no sync needed)
 ```bash
 e3cli assignments --detail <ID>
+e3cli assignments --detail <ID> --download            # also save its attachments (spec PDF/PPTX…)
+e3cli assignments --detail <ID> --download -o <dir>   # save them to a specific folder
 ```
 Prints the full description (HTML→text), attachment URLs, submission status, and due date. **Always read this before working** — the one-line summary in `e3cli assignments` is not enough to write a correct submission.
+Assignment attachments are **not** course materials: `e3cli download` / `sync` do not fetch them. Use `--download`; by default they go to `<download_dir>/<course>/_assignments/<assignment name>/`.
 
 ### 3. Pull supporting materials — **targeted only**
 Materials may include large media files (mp4 lectures, recordings, slide PDFs). **Never run a blanket sync** unless the user explicitly asks for "sync everything" / "下載全部". Always scope to what the user mentioned.

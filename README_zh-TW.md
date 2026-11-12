@@ -167,6 +167,8 @@ e3cli assignments                  # 當期
 e3cli assignments --due-soon 7     # 7 天內到期
 e3cli assignments --all            # 所有學期
 e3cli assignments --detail <ID>    # 查看完整描述與附件
+e3cli assignments --detail <ID> --download         # 同時下載作業附件
+e3cli assignments --detail <ID> --download -o DIR  # 下載到指定資料夾
 ```
 
 ### `e3cli download`
