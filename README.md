@@ -167,6 +167,8 @@ e3cli assignments                  # Current semester
 e3cli assignments --due-soon 7     # Due within 7 days
 e3cli assignments --all            # All semesters
 e3cli assignments --detail <ID>    # Full description + attachments for one assignment
+e3cli assignments --detail <ID> --download         # Also download its attachments
+e3cli assignments --detail <ID> --download -o DIR  # ...into a specific folder
 ```
 
 ### `e3cli download`
