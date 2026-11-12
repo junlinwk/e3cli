@@ -19,6 +19,10 @@ e3cli assignments --due-soon 7
 # View full assignment description + attachments
 e3cli assignments --detail <ASSIGNMENT_ID>
 
+# Download an assignment's attachments (default: <download_dir>/<course>/_assignments/<name>/)
+e3cli assignments --detail <ASSIGNMENT_ID> --download
+e3cli assignments --detail <ASSIGNMENT_ID> --download -o ./hw3
+
 # List courses (current semester)
 e3cli courses
 e3cli courses --all    # all semesters
@@ -67,7 +71,7 @@ e3cli skill uninstall              # remove
 ## Workflow: When a New Assignment is Detected
 
 1. `e3cli assignments` — see what's new/urgent (sorted by deadline). **No sync needed** — this hits the live API.
-2. `e3cli assignments --detail <ID>` — read the full description and check attachments. Also live.
+2. `e3cli assignments --detail <ID>` — read the full description and check attachments. Also live. Add `--download` to save the attachments (they are not part of course materials, so `download`/`sync` never fetch them).
 3. **Only if** the user mentions / asks about a specific course's materials: `e3cli download --course "<name>"` or `e3cli sync --course "<name>"`. Avoid blanket `e3cli sync` / `e3cli download` — they pull every file including large media (mp4 lectures, recordings).
 4. Work on the assignment
 5. `e3cli submit <ID> <file>` — submit when ready

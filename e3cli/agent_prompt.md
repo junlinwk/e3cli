@@ -31,6 +31,9 @@ e3cli assignments --due-soon 7
 
 # Full description + attachment URLs for one assignment (also live)
 e3cli assignments --detail <ID>
+
+# Save that assignment's attachments (spec files are not in course materials)
+e3cli assignments --detail <ID> --download
 ```
 
 ### Step 2: Pull supporting materials — only what the user asked about
@@ -49,7 +52,7 @@ find ~/e3-downloads/<course>/ -type f
 ```
 
 The agent should:
-- Read the assignment PDF/description (use `--detail` and the attachment URLs)
+- Read the assignment PDF/description (use `--detail`, and `--detail <ID> --download` to save the attachments)
 - Check `~/e3-downloads/<course>/` for relevant lecture materials
 - Understand the requirements before starting work
 

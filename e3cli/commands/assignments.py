@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import time
+from pathlib import Path
 
 import typer
 from rich.console import Console
@@ -12,8 +13,11 @@ from rich.table import Table
 
 from e3cli.api.assignments import get_assignments, get_submission_status_text
 from e3cli.api.courses import get_enrolled_courses
+from e3cli.api.files import download_file
 from e3cli.api.site import get_site_info
 from e3cli.commands._common import get_client, get_db
+from e3cli.config import load_config
+from e3cli.course_name import migrate_course_dir
 from e3cli.course_name import display_name
 from e3cli.formatting import format_duedate, format_submission_status, sort_assignments
 from e3cli.i18n import t
@@ -36,6 +40,24 @@ def _strip_html(html: str) -> str:
     return text.strip()
 
 
+def _sanitize(name: str) -> str:
+    return re.sub(r'[<>:"/\\|?*]', "_", name).strip().rstrip(".")
+
+
+def _download_attachments(client, attachments: list[dict], dest_dir: Path):
+    """下載作業附件到 dest_dir，回傳已下載的路徑。"""
+    saved = []
+    for att in attachments:
+        fname = att.get("filename", "")
+        furl = att.get("fileurl", "")
+        if not fname or not furl:
+            continue
+        dest = dest_dir / _sanitize(fname)
+        download_file(client, furl, dest)
+        saved.append(dest)
+    return saved
+
+
 def _truncate(text: str, max_len: int = 80) -> str:
     """截斷文字，保留第一行。"""
     first_line = text.split("\n")[0].strip()
@@ -49,8 +71,19 @@ def assignments(
     due_soon: int = typer.Option(None, "--due-soon", help=t("assign.opt_due_soon")),
     all_semesters: bool = typer.Option(False, "--all", "-a", help="Show all semesters"),
     detail: int = typer.Option(None, "--detail", "-d", help="Show detail for assignment ID"),
+    download: bool = typer.Option(
+        False, "--download", help="With --detail: download the assignment's attachments"
+    ),
+    output: Path = typer.Option(
+        None, "--output", "-o",
+        help="With --download: target directory (default: <download_dir>/<course>/_assignments/<name>)",
+    ),
 ):
     """List assignments and deadlines with submission status."""
+    if (download or output is not None) and detail is None:
+        console.print("[red]--download / --output require --detail <ID>[/red]")
+        raise typer.Exit(1)
+
     client = get_client()
     db = get_db()
 
@@ -123,6 +156,24 @@ def assignments(
                     size_str = f" ({fsize // 1024}KB)" if fsize else ""
                     url_str = f"  [dim]{furl}[/dim]" if furl else ""
                     console.print(f"  📎 {fname}{size_str}{url_str}")
+
+            if download:
+                if not attachments:
+                    console.print("\n[yellow]No attachments to download[/yellow]")
+                else:
+                    if output is not None:
+                        dest_dir = output.expanduser()
+                    else:
+                        download_dir = load_config().storage.download_dir
+                        course = next((c for c in course_list if c["id"] == target[2]), {})
+                        cdir = migrate_course_dir(
+                            download_dir, course.get("fullname", ""), course.get("shortname", str(target[2]))
+                        )
+                        dest_dir = download_dir / cdir / "_assignments" / _sanitize(a["name"])
+                    console.print()
+                    for dest in _download_attachments(client, attachments, dest_dir):
+                        console.print(f"  {t('tui.downloaded', f=dest.name)}")
+                    console.print(f"[dim]{t('dl.saved_to', path=str(dest_dir))}[/dim]")
         else:
             console.print(f"[red]Assignment ID {detail} not found[/red]")
         db.close()
